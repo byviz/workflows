@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔄 Elastic Workflows
+# 🔄 Elastic Workflows 
 ### Ejemplos Prácticos en Español (no oficial)
 
 [![Elastic 9.3+](https://img.shields.io/badge/Elastic-9.3+-005571?style=for-the-badge&logo=elastic)](https://www.elastic.co/)
@@ -8,7 +8,7 @@
 [![Language](https://img.shields.io/badge/Language-Español-red?style=for-the-badge)](README.md)
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=for-the-badge)](https://github.com/byviz/workflows)
 
-**Colección curada de workflows para Elastic Stack**  
+**Colección de workflows para Elastic Stack**  
 Automatización end-to-end sin programación: alerting, reporting, mantenimiento, IA y más.
 
 🌐 **[byviz.ai/workflows](https://byviz.ai/workflows)** | 💼 **[LinkedIn](https://www.linkedin.com/in/ivan-frias-molina-arquitecto-ingeniero-elasticsearch/)**
