@@ -111,9 +111,6 @@ steps:
       
       # Usar constante para timeout
       timeout: "{{consts.es_timeout}}"
-      
-      sort:
-        - "@timestamp:desc"
 
   # Step 3: Evaluar si supera umbral
   - name: evaluar_umbral

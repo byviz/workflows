@@ -75,10 +75,6 @@ steps:
       
       # Obtener documentos recientes
       size: 50
-      
-      # Sort: formato simplificado en Workflows
-      sort:
-        - "@timestamp:desc"
 
   # Step 3: Generar reporte del incidente
   - name: generar_reporte
@@ -95,9 +91,9 @@ steps:
         - Periodo analizado: Últimos 15 minutos
         - Timestamp: {{now | date: "%Y-%m-%d %H:%M:%S"}}
         
-        🔍 Primeros eventos:
+        🔍 Mensajes encontrados:
         {% for hit in steps.buscar_contexto_adicional.output.hits.hits %}
-        - [{{hit._source.@timestamp}}] {{hit._source.message}}
+        - {{hit._source.message}}
         {% endfor %}
         
         ════════════════════════════════════════════════
@@ -147,5 +143,7 @@ steps:
 # - Ajusta el índice y campos según tu entorno
 # - Personaliza las acciones según tus necesidades
 # - En producción, añade notificaciones reales (Slack, email, etc.)
+# - Sort está deshabilitado temporalmente (sintaxis en validación)
+# - Acceso a @timestamp en loops tiene limitaciones en esta versión
 # ═══════════════════════════════════════════════════════════════
 

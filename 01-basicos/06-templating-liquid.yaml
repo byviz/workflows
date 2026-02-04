@@ -375,9 +375,7 @@ steps:
         
         Documentos encontrados:
         {% for hit in steps.buscar_datos.output.hits.hits %}
-        {{loop.index}}. [{{hit._source.@timestamp | default: "Sin fecha"}}]
-           ID: {{hit._id}}
-           Índice: {{hit._index}}
+        {{loop.index}}. ID: {{hit._id}} | Índice: {{hit._index}}
         {% endfor %}
         
         ────────────────────────────────────────────────

@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](LICENSE)
 [![Workflows](https://img.shields.io/badge/Workflows-50%2B-brightgreen?style=flat-square)](https://byviz.ai/workflows)
 
-> **Colección curada de workflows para Elastic Stack en español**  
+> **Colección testeada de workflows para Elastic Stack en español**  
 > Automatización end-to-end sin programación: alerting, reporting, mantenimiento, IA y más.
 
 **Por [Iván Frías Molina](https://byviz.ai) · Consultor Elastic & Gold Contributor**

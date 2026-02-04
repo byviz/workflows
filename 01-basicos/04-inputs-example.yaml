@@ -103,9 +103,6 @@ steps:
       
       # Usar el input max_results
       size: "{{inputs.max_results}}"
-      
-      sort:
-        - "@timestamp:desc"
 
   # Step 3: Mostrar resultados
   - name: mostrar_resultados
@@ -128,8 +125,7 @@ steps:
         💡 PRIMEROS RESULTADOS:
         {% for hit in steps.buscar_con_parametros.output.hits.hits %}
         
-        [{{loop.index}}] Timestamp: {{hit._source.@timestamp}}
-            Mensaje: {{hit._source.message}}
+        [{{loop.index}}] {{hit._source.message}}
         {% endfor %}
 
 # ═══════════════════════════════════════════════════════════════
