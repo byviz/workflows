@@ -7,8 +7,9 @@
 > **Colección testeada de workflows para Elastic Stack en español**  
 > Automatización end-to-end sin programación: alerting, reporting, mantenimiento, IA y más.
 
-**Por [Iván Frías Molina](https://byviz.ai) · Consultor Elastic & Gold Contributor**
-
+**Por [Iván Frías Molina](https://byviz.ai) · Consultor Elastic & Gold Contributor & Founder Byviz Analytics**
+- 🌐 [byviz.ai](https://byviz.ai)
+- 💼 [LinkedIn](https://www.linkedin.com/in/ivan-frias-molina-arquitecto-ingeniero-elasticsearch/)
 ---
 
 ## 📚 ¿Qué son Elastic Workflows?
@@ -41,6 +42,7 @@ Este repositorio complementa la [documentación oficial de Elastic](https://www.
 ---
 
 ## 📂 Estructura del Repositorio
+**Trabajando en los siguientes workflows, se liberaran cuando esten complementamente testeados**
 
 ```
 workflows/
@@ -153,6 +155,7 @@ Aprende la sintaxis fundamental de workflows: triggers, steps, inputs y templati
 
 [Ver workflows básicos →](01-basicos/)
 
+**Trabajando en los siguientes workflows, se liberaran cuando esten complementamente testeados**
 ### 🔍 Búsqueda y Agregación
 Queries complejas, agregaciones, multi-índice y análisis de datos.
 
