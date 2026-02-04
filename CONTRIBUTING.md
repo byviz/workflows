@@ -5,7 +5,7 @@
 ## 🎯 Formas de Contribuir
 
 ### 1. 🐛 Reportar Issues
-- Usa el [issue tracker](https://github.com/ivanfriasml/workflows/issues)
+- Usa el [issue tracker](https://github.com/byviz/workflows/issues)
 - Describe el problema claramente
 - Incluye versión de Elastic
 - Proporciona pasos para reproducir
@@ -102,7 +102,7 @@ Todos los PRs serán revisados considerando:
 ## 📧 Contacto
 
 ¿Dudas sobre cómo contribuir?
-- Abre un [issue](https://github.com/ivanfriasml/workflows/issues)
+- Abre un [issue](https://github.com/byviz/workflows/issues)
 - Contacta en [byviz.ai/contacto](https://byviz.ai/contacto)
 
 ---
