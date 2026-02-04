@@ -1,0 +1,84 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Manual Trigger Básico
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Workflow básico con ejecución manual on-demand
+# Caso de uso: Testing, debugging, ejecuciones puntuales
+# Requisitos: Elastic 9.3+
+# Autor: Iván Frías Molina - Byviz Analytics
+# URL: https://byviz.ai/workflows
+# ═══════════════════════════════════════════════════════════════
+
+name: manual-trigger-basico
+description: |
+  Workflow de ejemplo con trigger manual.
+  Perfecto para aprender la estructura básica y probar funcionalidad.
+  
+  Este workflow:
+  1. Se ejecuta manualmente desde Kibana
+  2. Busca documentos en un índice
+  3. Muestra el resultado en consola
+  
+enabled: true
+tags: ["basico", "manual", "tutorial"]
+
+# ───────────────────────────────────────────────────────────────
+# TRIGGERS
+# ───────────────────────────────────────────────────────────────
+# Manual: Se ejecuta on-demand desde Kibana UI
+# Ideal para testing y debugging
+triggers:
+  - type: manual
+
+# ───────────────────────────────────────────────────────────────
+# STEPS
+# ───────────────────────────────────────────────────────────────
+steps:
+  # Step 1: Búsqueda simple en Elasticsearch
+  - name: buscar_documentos
+    type: elasticsearch.search
+    with:
+      # Índice a buscar (ajusta según tu entorno)
+      index: "logs-*"
+      
+      # Query: match_all para obtener todos los documentos
+      query:
+        match_all: {}
+      
+      # Limitar resultados
+      size: 10
+      
+      # Ordenar por timestamp descendente
+      sort:
+        - "@timestamp":
+            order: desc
+
+  # Step 2: Mostrar resultado en consola
+  - name: mostrar_resultado
+    type: console
+    with:
+      message: |
+        ✅ Workflow ejecutado correctamente
+        
+        📊 Resultados de búsqueda:
+        - Total encontrados: {{steps.buscar_documentos.output.hits.total.value}}
+        - Documentos retornados: {{steps.buscar_documentos.output.hits.hits.size}}
+        - Tiempo de búsqueda: {{steps.buscar_documentos.output.took}}ms
+        
+        💡 Revisa el historial de ejecución en Kibana para ver detalles completos
+
+# ═══════════════════════════════════════════════════════════════
+# CÓMO USAR ESTE WORKFLOW
+# ═══════════════════════════════════════════════════════════════
+# 1. Copia este YAML en Kibana → Stack Management → Workflows
+# 2. Clic en "Create workflow"
+# 3. Ajusta el índice según tu entorno (line 43)
+# 4. Guarda el workflow
+# 5. Clic en "Execute" para ejecutar manualmente
+# 6. Revisa el output en el historial de ejecuciones
+#
+# 📝 NOTAS:
+# - Asegúrate de que el índice existe en tu cluster
+# - El output se puede ver en: Management → Workflows → Execution history
+# - Usa este workflow como base para tus propias automatizaciones
+# ═══════════════════════════════════════════════════════════════
+

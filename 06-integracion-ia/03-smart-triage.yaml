@@ -1,0 +1,57 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Triage Inteligente con IA
+# ═══════════════════════════════════════════════════════════════
+name: smart-triage-ai
+description: Prioriza y asigna incidentes automáticamente con IA
+enabled: true
+tags: ["ia", "triage", "asignacion"]
+
+triggers:
+  - type: alert
+
+steps:
+  - name: analizar_incidente
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-10m"
+      size: 20
+  
+  - name: triage_ia
+    type: console
+    with:
+      message: |
+        🎯 TRIAGE INTELIGENTE (simulado)
+        
+        Total errores: {{steps.analizar_incidente.output.hits.total.value}}
+        
+        El agente IA determinaría:
+        
+        📊 PRIORIDAD: HIGH
+        Razón: Spike de errores 300% vs baseline
+        
+        👥 EQUIPO ASIGNADO: Backend Team
+        Razón: Errores en API layer, no frontend
+        
+        🏷️ CATEGORÍA: Performance Degradation
+        
+        ⚡ URGENCIA: Immediate
+        SLA: Respuesta en 30min
+        
+        💡 CONTEXTO SIMILAR:
+        - Incidente #1234 (similar pattern, resuelto con cache flush)
+        - Incidente #5678 (mismo servicio, fix: scale up)
+        
+        🔧 ACCIONES SUGERIDAS:
+        1. Verificar cache redis
+        2. Check database connections
+        3. Review último deploy si fue en últimas 2h
+

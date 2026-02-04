@@ -1,0 +1,286 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Búsqueda Básica con Filtros
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Queries básicas con filtros y ordenamiento
+# Caso de uso: Búsqueda de logs, eventos, documentos específicos
+# Requisitos: Elastic 9.3+
+# Autor: Iván Frías Molina - Byviz Analytics
+# ═══════════════════════════════════════════════════════════════
+
+name: search-basic
+description: |
+  Ejemplos de búsquedas básicas en Elasticsearch usando workflows.
+  
+  Cubre:
+  - Match queries
+  - Bool queries
+  - Range filters
+  - Sorting
+  - Field selection
+  
+enabled: true
+tags: ["busqueda", "queries", "filtros"]
+
+# ───────────────────────────────────────────────────────────────
+consts:
+  default_index: "logs-*"
+  time_range: "24h"
+  max_results: 50
+
+inputs:
+  - name: search_term
+    type: string
+    description: "Término a buscar"
+    default: "error"
+    required: false
+  
+  - name: log_level
+    type: string
+    description: "Nivel de log (ERROR, WARN, INFO)"
+    default: "ERROR"
+    required: false
+
+# ───────────────────────────────────────────────────────────────
+triggers:
+  - type: manual
+
+# ───────────────────────────────────────────────────────────────
+steps:
+  # ═══════════════════════════════════════════════════════════
+  # 1. BÚSQUEDA SIMPLE - Match query
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: busqueda_simple
+    type: elasticsearch.search
+    with:
+      index: "{{consts.default_index}}"
+      
+      # Match query: busca el término en el campo message
+      query:
+        match:
+          message: "{{inputs.search_term}}"
+      
+      size: 10
+      
+      # Ordenar por relevancia (_score) y fecha
+      sort:
+        - _score: desc
+        - "@timestamp": desc
+
+  # ═══════════════════════════════════════════════════════════
+  # 2. BÚSQUEDA CON FILTROS - Bool query
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: busqueda_con_filtros
+    type: elasticsearch.search
+    with:
+      index: "{{consts.default_index}}"
+      
+      query:
+        bool:
+          # MUST: Condiciones que deben cumplirse (afectan score)
+          must:
+            - match:
+                message: "{{inputs.search_term}}"
+          
+          # FILTER: Condiciones que deben cumplirse (no afectan score)
+          filter:
+            # Filtrar por nivel de log
+            - term:
+                log.level: "{{inputs.log_level}}"
+            
+            # Filtrar por rango de tiempo
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.time_range}}"
+                  lte: "now"
+      
+      size: "{{consts.max_results}}"
+      
+      sort:
+        - "@timestamp":
+            order: desc
+      
+      # Seleccionar solo campos específicos
+      _source:
+        - "@timestamp"
+        - "message"
+        - "log.level"
+        - "service.name"
+        - "host.name"
+
+  # ═══════════════════════════════════════════════════════════
+  # 3. BÚSQUEDA CON SHOULD - Match opcional
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: busqueda_con_should
+    type: elasticsearch.search
+    with:
+      index: "{{consts.default_index}}"
+      
+      query:
+        bool:
+          # Condición mínima requerida
+          must:
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.time_range}}"
+          
+          # SHOULD: Condiciones opcionales (aumentan score si se cumplen)
+          should:
+            - match:
+                message: "error"
+            - match:
+                message: "exception"
+            - match:
+                message: "failed"
+          
+          # Mínimo de condiciones should que deben cumplirse
+          minimum_should_match: 1
+      
+      size: 20
+      
+      sort:
+        - _score: desc
+        - "@timestamp": desc
+
+  # ═══════════════════════════════════════════════════════════
+  # 4. BÚSQUEDA CON WILDCARDS
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: busqueda_wildcard
+    type: elasticsearch.search
+    with:
+      index: "{{consts.default_index}}"
+      
+      query:
+        bool:
+          must:
+            # Wildcard: busca patrones con * y ?
+            - wildcard:
+                message: "*{{inputs.search_term}}*"
+          
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-1h"
+      
+      size: 15
+
+  # ═══════════════════════════════════════════════════════════
+  # 5. BÚSQUEDA MULTI-CAMPO
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: busqueda_multi_campo
+    type: elasticsearch.search
+    with:
+      index: "{{consts.default_index}}"
+      
+      query:
+        multi_match:
+          # Buscar en múltiples campos
+          query: "{{inputs.search_term}}"
+          fields:
+            - "message^2"      # ^2 = boost (más importancia)
+            - "error.message"
+            - "log.logger"
+          
+          # Tipo de match
+          type: "best_fields"
+      
+      size: 10
+
+  # ═══════════════════════════════════════════════════════════
+  # REPORTE DE RESULTADOS
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: reporte_busqueda
+    type: console
+    with:
+      message: |
+        ═══════════════════════════════════════════════════════
+        📊 REPORTE DE BÚSQUEDAS
+        ═══════════════════════════════════════════════════════
+        
+        Parámetros:
+        - Índice: {{consts.default_index}}
+        - Término: "{{inputs.search_term}}"
+        - Nivel: {{inputs.log_level}}
+        - Rango: Últimas {{consts.time_range}}
+        
+        ───────────────────────────────────────────────────────
+        
+        1️⃣  BÚSQUEDA SIMPLE (Match):
+        Total: {{steps.busqueda_simple.output.hits.total.value}}
+        Tiempo: {{steps.busqueda_simple.output.took}}ms
+        
+        2️⃣  BÚSQUEDA CON FILTROS (Bool):
+        Total: {{steps.busqueda_con_filtros.output.hits.total.value}}
+        Tiempo: {{steps.busqueda_con_filtros.output.took}}ms
+        
+        Primeros resultados:
+        {% for hit in steps.busqueda_con_filtros.output.hits.hits limit:5 %}
+        [{{loop.index}}] {{hit._source.@timestamp}}
+            📝 {{hit._source.message | truncate: 100}}
+            🏷️  {{hit._source.log.level}} | {{hit._source.service.name | default: "N/A"}}
+        {% endfor %}
+        
+        ───────────────────────────────────────────────────────
+        
+        3️⃣  BÚSQUEDA CON SHOULD (Match opcional):
+        Total: {{steps.busqueda_con_should.output.hits.total.value}}
+        Tiempo: {{steps.busqueda_con_should.output.took}}ms
+        
+        4️⃣  BÚSQUEDA WILDCARD:
+        Total: {{steps.busqueda_wildcard.output.hits.total.value}}
+        Tiempo: {{steps.busqueda_wildcard.output.took}}ms
+        
+        5️⃣  BÚSQUEDA MULTI-CAMPO:
+        Total: {{steps.busqueda_multi_campo.output.hits.total.value}}
+        Tiempo: {{steps.busqueda_multi_campo.output.took}}ms
+        
+        ═══════════════════════════════════════════════════════
+        
+        💡 Tips:
+        - Bool queries con filter son más rápidas
+        - Use must para condiciones que afectan relevancia
+        - Use filter para condiciones exactas
+        - Should permite matches opcionales
+        - Wildcards son útiles pero pueden ser lentos en datasets grandes
+
+# ═══════════════════════════════════════════════════════════════
+# NOTAS SOBRE TIPOS DE QUERIES
+# ═══════════════════════════════════════════════════════════════
+#
+# MATCH:
+# - Full-text search
+# - Analiza el texto
+# - Bueno para búsqueda de usuarios
+#
+# TERM:
+# - Match exacto
+# - No analiza el texto
+# - Perfecto para keywords, IDs, enums
+#
+# RANGE:
+# - Rangos numéricos o de fechas
+# - gte, gt, lte, lt
+#
+# BOOL:
+# - Combina múltiples queries
+# - must: AND (afecta score)
+# - filter: AND (no afecta score, más rápido)
+# - should: OR (opcional)
+# - must_not: NOT
+#
+# WILDCARD:
+# - Patrones con * (muchos) y ? (uno)
+# - Puede ser lento en índices grandes
+#
+# MULTI_MATCH:
+# - Busca en múltiples campos
+# - Soporta boost (^N)
+# - Varios tipos: best_fields, most_fields, cross_fields
+#
+# ═══════════════════════════════════════════════════════════════
+

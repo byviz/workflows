@@ -1,0 +1,44 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Clasificación Inteligente de Logs
+# ═══════════════════════════════════════════════════════════════
+name: log-classification-ai
+description: Clasifica logs automáticamente usando IA
+enabled: true
+tags: ["ia", "clasificacion", "nlp"]
+
+triggers:
+  - type: manual
+
+steps:
+  - name: obtener_logs_sin_clasificar
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        bool:
+          must_not:
+            - exists:
+                field: "log.category"
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-1h"
+      size: 50
+  
+  - name: clasificar_con_ia
+    type: console
+    with:
+      message: |
+        🤖 CLASIFICACIÓN CON IA (simulado)
+        
+        Logs sin clasificar: {{steps.obtener_logs_sin_clasificar.output.hits.total.value}}
+        
+        El agente IA clasificaría cada log en:
+        - Categoría (error_type, warning_type, info_type)
+        - Severidad (critical, high, medium, low)
+        - Servicio afectado
+        - Acción recomendada (investigate, monitor, ignore)
+        - Tags relevantes
+        
+        Luego actualizaría cada documento con la clasificación.
+

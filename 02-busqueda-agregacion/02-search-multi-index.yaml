@@ -1,0 +1,361 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Búsqueda Multi-Índice
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Buscar datos en múltiples índices simultáneamente
+# Caso de uso: Análisis correlacionado, búsqueda cross-índice
+# Requisitos: Elastic 9.3+
+# Autor: Iván Frías Molina - Byviz Analytics
+# ═══════════════════════════════════════════════════════════════
+
+name: search-multi-index
+description: |
+  Búsquedas que abarcan múltiples índices simultáneamente.
+  
+  Casos de uso:
+  - Correlacionar logs, métricas y APM
+  - Búsqueda en logs de múltiples aplicaciones
+  - Análisis cross-entorno (dev, staging, prod)
+  - Agregación de datos de múltiples fuentes
+  
+enabled: true
+tags: ["busqueda", "multi-index", "correlacion"]
+
+# ───────────────────────────────────────────────────────────────
+consts:
+  time_range: "1h"
+  max_results: 50
+
+inputs:
+  - name: correlation_id
+    type: string
+    description: "ID para correlacionar entre índices"
+    required: false
+    default: ""
+  
+  - name: service_name
+    type: string
+    description: "Nombre del servicio a analizar"
+    required: false
+    default: ""
+
+# ───────────────────────────────────────────────────────────────
+triggers:
+  - type: manual
+
+# ───────────────────────────────────────────────────────────────
+steps:
+  # ═══════════════════════════════════════════════════════════
+  # 1. BÚSQUEDA EN LOGS Y MÉTRICAS
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: buscar_logs_y_metricas
+    type: elasticsearch.search
+    with:
+      # Múltiples índices separados por coma
+      index: "logs-*,metrics-*"
+      
+      query:
+        bool:
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.time_range}}"
+                  lte: "now"
+      
+      size: "{{consts.max_results}}"
+      
+      sort:
+        - "@timestamp": desc
+      
+      # Incluir el índice en los resultados
+      _source:
+        includes:
+          - "*"
+
+  # ═══════════════════════════════════════════════════════════
+  # 2. BÚSQUEDA POR SERVICIO EN MÚLTIPLES ÍNDICES
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: buscar_por_servicio
+    type: elasticsearch.search
+    with:
+      index: "logs-*,traces-apm-*,metrics-*"
+      
+      query:
+        bool:
+          must:
+            - match:
+                service.name: "{{inputs.service_name}}"
+          
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.time_range}}"
+      
+      size: 100
+      
+      # Agregar por índice para ver distribución
+      aggregations:
+        por_indice:
+          terms:
+            field: "_index"
+            size: 20
+        
+        por_tipo:
+          terms:
+            field: "data_stream.type"
+            size: 10
+
+  # ═══════════════════════════════════════════════════════════
+  # 3. CORRELACIÓN POR TRACE ID
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: correlacion_por_trace
+    type: elasticsearch.search
+    with:
+      # Buscar en logs, APM traces y spans
+      index: "logs-*,traces-apm-*"
+      
+      query:
+        bool:
+          should:
+            # Buscar trace.id en diferentes campos según el índice
+            - term:
+                trace.id: "{{inputs.correlation_id}}"
+            - term:
+                transaction.id: "{{inputs.correlation_id}}"
+            - term:
+                span.id: "{{inputs.correlation_id}}"
+          
+          minimum_should_match: 1
+          
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.time_range}}"
+      
+      size: 200
+      
+      sort:
+        - "@timestamp": asc
+
+  # ═══════════════════════════════════════════════════════════
+  # 4. BÚSQUEDA EN ENTORNOS (dev, staging, prod)
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: buscar_cross_entorno
+    type: elasticsearch.search
+    with:
+      # Wildcard que abarca múltiples entornos
+      index: "logs-*-dev-*,logs-*-staging-*,logs-*-prod-*"
+      
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"
+          
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-24h"
+      
+      size: 0  # Solo queremos agregaciones
+      
+      aggregations:
+        errores_por_entorno:
+          terms:
+            field: "environment"
+            size: 10
+        
+        errores_timeline:
+          date_histogram:
+            field: "@timestamp"
+            fixed_interval: "1h"
+
+  # ═══════════════════════════════════════════════════════════
+  # 5. BÚSQUEDA CON EXCLUSIONES
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: buscar_con_exclusiones
+    type: elasticsearch.search
+    with:
+      # Todos los logs EXCEPTO system logs
+      index: "logs-*,-logs-system-*"
+      
+      query:
+        bool:
+          must:
+            - exists:
+                field: "error.message"
+          
+          must_not:
+            # Excluir logs de health checks
+            - match:
+                message: "health check"
+          
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.time_range}}"
+      
+      size: 20
+
+  # ═══════════════════════════════════════════════════════════
+  # 6. ANÁLISIS AGREGADO MULTI-ÍNDICE
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: analisis_agregado
+    type: elasticsearch.search
+    with:
+      index: "logs-*,metrics-*,traces-apm-*"
+      
+      query:
+        bool:
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-24h"
+      
+      size: 0
+      
+      aggregations:
+        # Distribución por data stream
+        por_data_stream:
+          terms:
+            field: "data_stream.dataset"
+            size: 20
+        
+        # Top servicios
+        top_servicios:
+          terms:
+            field: "service.name"
+            size: 10
+        
+        # Timeline de eventos
+        timeline:
+          date_histogram:
+            field: "@timestamp"
+            fixed_interval: "1h"
+            
+            # Sub-agregación: contar por tipo
+            aggregations:
+              por_tipo:
+                terms:
+                  field: "data_stream.type"
+
+  # ═══════════════════════════════════════════════════════════
+  # REPORTE
+  # ═══════════════════════════════════════════════════════════
+  
+  - name: reporte_multi_index
+    type: console
+    with:
+      message: |
+        ═══════════════════════════════════════════════════════
+        🔍 ANÁLISIS MULTI-ÍNDICE
+        ═══════════════════════════════════════════════════════
+        
+        Periodo: Últimas {{consts.time_range}}
+        
+        ───────────────────────────────────────────────────────
+        1️⃣  LOGS Y MÉTRICAS COMBINADOS
+        ───────────────────────────────────────────────────────
+        Total documentos: {{steps.buscar_logs_y_metricas.output.hits.total.value}}
+        Tiempo: {{steps.buscar_logs_y_metricas.output.took}}ms
+        
+        {% if inputs.service_name != "" %}
+        ───────────────────────────────────────────────────────
+        2️⃣  BÚSQUEDA POR SERVICIO: {{inputs.service_name}}
+        ───────────────────────────────────────────────────────
+        Total: {{steps.buscar_por_servicio.output.hits.total.value}}
+        
+        Distribución por índice:
+        {% for bucket in steps.buscar_por_servicio.output.aggregations.por_indice.buckets limit:5 %}
+        - {{bucket.key}}: {{bucket.doc_count}} documentos
+        {% endfor %}
+        {% endif %}
+        
+        {% if inputs.correlation_id != "" %}
+        ───────────────────────────────────────────────────────
+        3️⃣  CORRELACIÓN POR TRACE ID: {{inputs.correlation_id}}
+        ───────────────────────────────────────────────────────
+        Documentos correlacionados: {{steps.correlacion_por_trace.output.hits.total.value}}
+        
+        Timeline:
+        {% for hit in steps.correlacion_por_trace.output.hits.hits limit:10 %}
+        [{{hit._source.@timestamp}}] {{hit._index}}
+          → {{hit._source.message | default: hit._source.transaction.name | default: "N/A"}}
+        {% endfor %}
+        {% endif %}
+        
+        ───────────────────────────────────────────────────────
+        4️⃣  ERRORES CROSS-ENTORNO
+        ───────────────────────────────────────────────────────
+        Total errores (24h): {{steps.buscar_cross_entorno.output.hits.total.value}}
+        
+        Por entorno:
+        {% for bucket in steps.buscar_cross_entorno.output.aggregations.errores_por_entorno.buckets %}
+        - {{bucket.key | upcase}}: {{bucket.doc_count}} errores
+        {% endfor %}
+        
+        ───────────────────────────────────────────────────────
+        5️⃣  ANÁLISIS AGREGADO COMPLETO
+        ───────────────────────────────────────────────────────
+        
+        Top Data Streams:
+        {% for bucket in steps.analisis_agregado.output.aggregations.por_data_stream.buckets limit:5 %}
+        {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}}
+        {% endfor %}
+        
+        Top Servicios:
+        {% for bucket in steps.analisis_agregado.output.aggregations.top_servicios.buckets limit:5 %}
+        {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}}
+        {% endfor %}
+        
+        ═══════════════════════════════════════════════════════
+        
+        💡 VENTAJAS DE BÚSQUEDA MULTI-ÍNDICE:
+        
+        ✅ Correlacionar datos de múltiples fuentes
+        ✅ Vista unificada de logs, métricas y traces
+        ✅ Análisis cross-entorno en una sola query
+        ✅ Mejor para investigación de incidentes
+        ✅ Reduce necesidad de múltiples búsquedas
+        
+        ⚠️  CONSIDERACIONES:
+        
+        → Puede ser más lento que búsqueda en un solo índice
+        → Usar filtros para limitar el scope
+        → Considerar impacto en cluster con wildcards amplios
+        → Usar size: 0 si solo necesitas agregaciones
+
+# ═══════════════════════════════════════════════════════════════
+# PATRONES DE ÍNDICES MULTI-INDEX
+# ═══════════════════════════════════════════════════════════════
+#
+# SINTAXIS:
+# - "index1,index2,index3"           → Índices específicos
+# - "logs-*,metrics-*"               → Wildcards múltiples
+# - "logs-*,-logs-debug-*"           → Con exclusiones (-)
+# - "logs-{app1,app2,app3}-*"        → Expansión de llaves
+#
+# EJEMPLOS COMUNES:
+# 
+# Observabilidad completa:
+#   "logs-*,metrics-*,traces-apm-*"
+#
+# Múltiples aplicaciones:
+#   "logs-app1-*,logs-app2-*,logs-app3-*"
+#
+# Cross-entorno:
+#   "logs-*-dev-*,logs-*-staging-*,logs-*-prod-*"
+#
+# Con exclusiones:
+#   "logs-*,-logs-system-*,-logs-audit-*"
+#
+# Data streams:
+#   "logs-*,logs-*-*"
+#
+# ═══════════════════════════════════════════════════════════════
+

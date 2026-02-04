@@ -1,0 +1,41 @@
+# Elastic Workflows - .gitignore
+
+# Archivos temporales
+*.tmp
+*.bak
+*.swp
+*~
+
+# Archivos de configuración con credenciales
+secrets.yaml
+credentials.yaml
+.env
+.env.local
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# IDEs y editores
+.vscode/
+.idea/
+*.iml
+*.sublime-*
+
+# Logs
+*.log
+logs/
+
+# Archivos de testing personalizados
+test-data/
+local-test/
+
+# Node modules (si se usa alguna herramienta)
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.pytest_cache/
+

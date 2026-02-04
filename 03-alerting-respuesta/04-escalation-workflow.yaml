@@ -1,0 +1,123 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Escalamiento por Severidad
+# ═══════════════════════════════════════════════════════════════
+name: escalation-workflow
+description: |
+  Escalamiento automático según severidad del incidente.
+  - Low: Solo log
+  - Medium: Notificar canal general
+  - High: Notificar + crear ticket
+  - Critical: Todo lo anterior + escalar a on-call
+enabled: true
+tags: ["alerting", "escalamiento", "severidad"]
+
+consts:
+  low_threshold: 50
+  medium_threshold: 100
+  high_threshold: 300
+  critical_threshold: 1000
+
+triggers:
+  - type: alert
+
+steps:
+  # 1. Contar errores
+  - name: contar_errores
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-5m"
+      size: 0
+  
+  # 2. Escalamiento condicional
+  - name: determinar_accion
+    type: if
+    with:
+      condition: "{{steps.contar_errores.output.hits.total.value >= consts.critical_threshold}}"
+      then:
+        # CRITICAL: Máxima escalación
+        - type: console
+          with:
+            message: |
+              🚨🚨🚨 CRITICAL ESCALATION
+              Errores: {{steps.contar_errores.output.hits.total.value}}
+              
+              ACCIONES:
+              ✅ Log registrado
+              ✅ Notificación a #alerts-general
+              ✅ Ticket Jira creado (Priority: Critical)
+              ✅ PagerDuty triggered
+              ✅ On-call engineer notified
+      else:
+        - type: if
+          with:
+            condition: "{{steps.contar_errores.output.hits.total.value >= consts.high_threshold}}"
+            then:
+              # HIGH: Crear ticket y notificar
+              - type: console
+                with:
+                  message: |
+                    🚨 HIGH SEVERITY
+                    Errores: {{steps.contar_errores.output.hits.total.value}}
+                    
+                    ACCIONES:
+                    ✅ Log registrado
+                    ✅ Notificación a #alerts-general
+                    ✅ Ticket Jira creado (Priority: High)
+            else:
+              - type: if
+                with:
+                  condition: "{{steps.contar_errores.output.hits.total.value >= consts.medium_threshold}}"
+                  then:
+                    # MEDIUM: Solo notificar
+                    - type: console
+                      with:
+                        message: |
+                          ⚠️ MEDIUM SEVERITY
+                          Errores: {{steps.contar_errores.output.hits.total.value}}
+                          
+                          ACCIONES:
+                          ✅ Log registrado
+                          ✅ Notificación a #alerts-general
+                  else:
+                    # LOW: Solo registrar
+                    - type: console
+                      with:
+                        message: |
+                          ℹ️  LOW SEVERITY
+                          Errores: {{steps.contar_errores.output.hits.total.value}}
+                          
+                          ACCIONES:
+                          ✅ Log registrado
+
+# ═══════════════════════════════════════════════════════════════
+# MATRIZ DE ESCALAMIENTO:
+# 
+# CRITICAL (>= 1000):
+#   - PagerDuty page
+#   - Ticket crítico en Jira
+#   - Slack + Email
+#   - On-call inmediato
+#
+# HIGH (>= 300):
+#   - Ticket high priority
+#   - Slack notification
+#   - Email al equipo
+#
+# MEDIUM (>= 100):
+#   - Slack notification
+#   - Log en sistema
+#
+# LOW (>= 50):
+#   - Solo log
+#   - Revisar en próximo sprint
+# ═══════════════════════════════════════════════════════════════
+

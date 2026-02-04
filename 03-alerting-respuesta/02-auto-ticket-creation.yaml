@@ -1,0 +1,112 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Creación Automática de Tickets
+# ═══════════════════════════════════════════════════════════════
+name: auto-ticket-creation
+description: |
+  Crea tickets automáticamente cuando se detecta un incidente.
+  Incluye contexto completo y asigna según reglas.
+enabled: true
+tags: ["alerting", "tickets", "jira"]
+
+consts:
+  jira_project: "OPS"
+  default_assignee: "ops-team"
+
+triggers:
+  - type: alert
+
+steps:
+  # 1. Recopilar información del incidente
+  - name: recopilar_info
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-15m"
+      size: 20
+      aggregations:
+        servicios_afectados:
+          terms:
+            field: "service.name"
+            size: 10
+  
+  # 2. Determinar prioridad
+  - name: calcular_prioridad
+    type: if
+    with:
+      condition: "{{steps.recopilar_info.output.hits.total.value > 500}}"
+      then:
+        - type: console
+          with:
+            message: "Prioridad: CRITICAL"
+      else:
+        - type: console
+          with:
+            message: "Prioridad: MEDIUM"
+  
+  # 3. Preparar payload del ticket (simulado con console)
+  # En producción, usar http.request para API de Jira
+  - name: crear_ticket
+    type: console
+    with:
+      message: |
+        🎫 TICKET CREADO (simulado)
+        
+        Project: {{consts.jira_project}}
+        Type: Incident
+        Priority: {% if steps.recopilar_info.output.hits.total.value > 500 %}Critical{% else %}Medium{% endif %}
+        Assignee: {{consts.default_assignee}}
+        
+        Title: High Error Rate Detected - {{now | date: "%Y-%m-%d %H:%M"}}
+        
+        Description:
+        Se detectaron {{steps.recopilar_info.output.hits.total.value}} errores en los últimos 15 minutos.
+        
+        Servicios afectados:
+        {% for bucket in steps.recopilar_info.output.aggregations.servicios_afectados.buckets limit:5 %}
+        - {{bucket.key}}: {{bucket.doc_count}} errores
+        {% endfor %}
+        
+        Timeline: {{now | date: "%Y-%m-%d %H:%M:%S"}}
+        Link to Kibana: [Generar link a Discover]
+        
+        Últimos errores:
+        {% for hit in steps.recopilar_info.output.hits.hits limit:3 %}
+        - [{{hit._source.@timestamp}}] {{hit._source.message | truncate: 100}}
+        {% endfor %}
+  
+  # 4. En producción, descomentar para crear ticket real:
+  # - name: crear_ticket_jira
+  #   type: http.request
+  #   with:
+  #     url: "https://your-jira.atlassian.net/rest/api/3/issue"
+  #     method: POST
+  #     headers:
+  #       Authorization: "Bearer {{secrets.jira_token}}"
+  #       Content-Type: "application/json"
+  #     body:
+  #       fields:
+  #         project:
+  #           key: "{{consts.jira_project}}"
+  #         summary: "High Error Rate - {{now | date: '%Y-%m-%d %H:%M'}}"
+  #         description: "{{steps.recopilar_info.output.hits.total.value}} errors detected"
+  #         issuetype:
+  #           name: "Incident"
+  #         priority:
+  #           name: "{% if steps.recopilar_info.output.hits.total.value > 500 %}Critical{% else %}Medium{% endif %}"
+
+# ═══════════════════════════════════════════════════════════════
+# PARA INTEGRACIÓN REAL CON JIRA:
+# 1. Crear API token en Jira
+# 2. Guardar en Kibana Keystore: bin/elasticsearch-keystore add workflows.jira_token
+# 3. Descomentar el step http.request
+# 4. Ajustar URL y campos según tu instancia de Jira
+# ═══════════════════════════════════════════════════════════════
+

@@ -1,0 +1,71 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Conditional Branching Avanzado
+# ═══════════════════════════════════════════════════════════════
+name: conditional-branching-advanced
+description: Lógica condicional compleja con múltiples branches
+enabled: true
+tags: ["avanzado", "conditional", "branching"]
+
+triggers:
+  - type: manual
+
+steps:
+  - name: analizar_sistema
+    type: elasticsearch.search
+    with:
+      index: "logs-*,metrics-*"
+      query:
+        range:
+          "@timestamp":
+            gte: "now-15m"
+      size: 0
+      aggregations:
+        errores:
+          filter:
+            term:
+              log.level: "ERROR"
+        cpu_avg:
+          avg:
+            field: "system.cpu.total.pct"
+        memory_avg:
+          avg:
+            field: "system.memory.used.pct"
+  
+  - name: decision_tree
+    type: if
+    with:
+      # Branch 1: Critical errors + High CPU
+      condition: "{{steps.analizar_sistema.output.aggregations.errores.doc_count > 500 and steps.analizar_sistema.output.aggregations.cpu_avg.value > 0.9}}"
+      then:
+        - type: console
+          with:
+            message: |
+              🚨 SCENARIO: Critical Errors + Resource Exhaustion
+              Action: Emergency scale-up + immediate investigation
+      else:
+        - type: if
+          with:
+            # Branch 2: High errors but normal resources
+            condition: "{{steps.analizar_sistema.output.aggregations.errores.doc_count > 500}}"
+            then:
+              - type: console
+                with:
+                  message: |
+                    ⚠️ SCENARIO: High Errors + Normal Resources
+                    Action: Code issue likely, trigger code review
+            else:
+              - type: if
+                with:
+                  # Branch 3: Normal errors but high resources
+                  condition: "{{steps.analizar_sistema.output.aggregations.cpu_avg.value > 0.9 or steps.analizar_sistema.output.aggregations.memory_avg.value > 0.9}}"
+                  then:
+                    - type: console
+                      with:
+                        message: |
+                          💡 SCENARIO: Resource Pressure
+                          Action: Scale horizontally
+                  else:
+                    - type: console
+                      with:
+                        message: "✅ SCENARIO: All Normal"
+

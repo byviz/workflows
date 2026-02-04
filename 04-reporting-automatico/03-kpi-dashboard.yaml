@@ -1,0 +1,46 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: KPIs en Tiempo Real
+# ═══════════════════════════════════════════════════════════════
+name: kpi-dashboard
+description: Actualización horaria de KPIs clave
+enabled: true
+tags: ["kpi", "dashboard", "metrics"]
+
+triggers:
+  - type: scheduled
+    with:
+      schedule: "0 * * * *"  # Cada hora
+
+steps:
+  - name: calcular_kpis
+    type: elasticsearch.search
+    with:
+      index: "logs-*,metrics-*,traces-apm-*"
+      query:
+        range:
+          "@timestamp":
+            gte: "now-1h"
+      size: 0
+      aggregations:
+        availability:
+          filter:
+            term:
+              event.outcome: "success"
+        response_time_avg:
+          avg:
+            field: "transaction.duration.us"
+        error_rate:
+          filter:
+            term:
+              log.level: "ERROR"
+  
+  - name: mostrar_kpis
+    type: console
+    with:
+      message: |
+        📊 KPIs - {{now | date: "%H:00"}}
+        
+        Disponibilidad: {{steps.calcular_kpis.output.aggregations.availability.doc_count}}
+        Response Time: {{steps.calcular_kpis.output.aggregations.response_time_avg.value | divided_by: 1000 | round: 2}}ms
+        Errores (1h): {{steps.calcular_kpis.output.aggregations.error_rate.doc_count}}
+

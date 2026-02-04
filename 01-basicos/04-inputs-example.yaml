@@ -1,0 +1,190 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Ejemplo de Inputs
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Workflow parametrizable con inputs dinámicos
+# Caso de uso: Workflows reutilizables con diferentes valores
+# Requisitos: Elastic 9.3+
+# Autor: Iván Frías Molina - Byviz Analytics
+# URL: https://byviz.ai/workflows
+# ═══════════════════════════════════════════════════════════════
+
+name: inputs-example
+description: |
+  Workflow que demuestra el uso de INPUTS para parametrizar la ejecución.
+  
+  Los inputs permiten:
+  - Reutilizar el mismo workflow con diferentes valores
+  - Hacer workflows más flexibles y adaptables
+  - Solicitar parámetros en tiempo de ejecución
+  
+  Este workflow busca logs según los parámetros que le pases.
+  
+enabled: true
+tags: ["basico", "inputs", "parametros"]
+
+# ───────────────────────────────────────────────────────────────
+# INPUTS
+# ───────────────────────────────────────────────────────────────
+# Los inputs son parámetros que puedes configurar en cada ejecución
+inputs:
+  # Input 1: Patrón de índice
+  - name: index_pattern
+    type: string
+    description: "Patrón de índice a buscar"
+    required: true
+    default: "logs-*"
+  
+  # Input 2: Nivel de log
+  - name: log_level
+    type: string
+    description: "Nivel de log a filtrar (ERROR, WARN, INFO, DEBUG)"
+    required: false
+    default: "ERROR"
+  
+  # Input 3: Rango de tiempo
+  - name: time_range
+    type: string
+    description: "Rango de tiempo (formato Elasticsearch, ej: now-1h)"
+    required: false
+    default: "now-1h"
+  
+  # Input 4: Número de resultados
+  - name: max_results
+    type: integer
+    description: "Número máximo de documentos a retornar"
+    required: false
+    default: 10
+
+# ───────────────────────────────────────────────────────────────
+# TRIGGERS
+# ───────────────────────────────────────────────────────────────
+triggers:
+  - type: manual
+
+# ───────────────────────────────────────────────────────────────
+# STEPS
+# ───────────────────────────────────────────────────────────────
+steps:
+  # Step 1: Mostrar parámetros recibidos
+  - name: mostrar_parametros
+    type: console
+    with:
+      message: |
+        📥 PARÁMETROS RECIBIDOS
+        ════════════════════════════════════════════════
+        
+        Índice: {{inputs.index_pattern}}
+        Nivel de log: {{inputs.log_level}}
+        Rango de tiempo: {{inputs.time_range}}
+        Máximo de resultados: {{inputs.max_results}}
+        
+        ════════════════════════════════════════════════
+
+  # Step 2: Buscar usando los inputs
+  - name: buscar_con_parametros
+    type: elasticsearch.search
+    with:
+      # Usar el input index_pattern
+      index: "{{inputs.index_pattern}}"
+      
+      query:
+        bool:
+          must:
+            # Filtrar por nivel de log (usando input)
+            - match:
+                log.level: "{{inputs.log_level}}"
+          
+          filter:
+            # Filtrar por rango de tiempo (usando input)
+            - range:
+                "@timestamp":
+                  gte: "{{inputs.time_range}}"
+                  lte: "now"
+      
+      # Usar el input max_results
+      size: "{{inputs.max_results}}"
+      
+      sort:
+        - "@timestamp":
+            order: desc
+
+  # Step 3: Mostrar resultados
+  - name: mostrar_resultados
+    type: console
+    with:
+      message: |
+        📊 RESULTADOS DE LA BÚSQUEDA
+        ════════════════════════════════════════════════
+        
+        Índice buscado: {{inputs.index_pattern}}
+        Filtro aplicado: log.level = {{inputs.log_level}}
+        Periodo: {{inputs.time_range}} hasta now
+        
+        Total encontrados: {{steps.buscar_con_parametros.output.hits.total.value}}
+        Documentos retornados: {{steps.buscar_con_parametros.output.hits.hits.size}}
+        Tiempo de búsqueda: {{steps.buscar_con_parametros.output.took}}ms
+        
+        ════════════════════════════════════════════════
+        
+        💡 PRIMEROS RESULTADOS:
+        {% for hit in steps.buscar_con_parametros.output.hits.hits limit:3 %}
+        
+        [{{loop.index}}] Timestamp: {{hit._source.@timestamp}}
+            Mensaje: {{hit._source.message}}
+        {% endfor %}
+
+# ═══════════════════════════════════════════════════════════════
+# CÓMO USAR ESTE WORKFLOW CON INPUTS
+# ═══════════════════════════════════════════════════════════════
+# 
+# 1. EJECUCIÓN MANUAL CON VALORES POR DEFECTO:
+#    - Ve a Kibana → Workflows → alert-trigger-basico
+#    - Clic en "Execute"
+#    - Los valores por defecto se usarán automáticamente
+#
+# 2. EJECUCIÓN MANUAL CON VALORES PERSONALIZADOS:
+#    - Clic en "Execute"
+#    - En el modal, cambia los valores de los inputs:
+#      * index_pattern: "logs-app-production-*"
+#      * log_level: "WARN"
+#      * time_range: "now-24h"
+#      * max_results: 50
+#    - Clic en "Execute"
+#
+# 3. USO EN WORKFLOWS PROGRAMADOS:
+#    - Cuando uses trigger scheduled, los defaults se aplicarán
+#    - Si necesitas valores distintos, cámbialos en la sección inputs
+#
+# 📝 EJEMPLOS DE VALORES:
+#
+# index_pattern:
+#   - "logs-*"                  → Todos los logs
+#   - "logs-app-*"              → Logs de aplicación
+#   - "logs-prod-*"             → Logs de producción
+#   - "metrics-*"               → Métricas
+#
+# log_level:
+#   - "ERROR"    → Solo errores
+#   - "WARN"     → Warnings
+#   - "INFO"     → Información
+#   - "DEBUG"    → Debug (cuidado con el volumen)
+#
+# time_range:
+#   - "now-15m"  → Últimos 15 minutos
+#   - "now-1h"   → Última hora
+#   - "now-24h"  → Último día
+#   - "now-7d"   → Última semana
+#
+# max_results:
+#   - 10    → Para quick checks
+#   - 50    → Para análisis medio
+#   - 100   → Para análisis detallado
+#   - 1000  → Para exports (cuidado con performance)
+#
+# 💡 VENTAJAS DE USAR INPUTS:
+# - Un solo workflow sirve para múltiples escenarios
+# - Fácil de reutilizar sin duplicar código
+# - Testing rápido con diferentes parámetros
+# - Workflows más mantenibles
+# ═══════════════════════════════════════════════════════════════
+

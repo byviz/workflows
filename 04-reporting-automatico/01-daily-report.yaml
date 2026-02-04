@@ -1,0 +1,118 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Reporte Diario Automático
+# ═══════════════════════════════════════════════════════════════
+name: daily-report
+description: Genera reporte diario con métricas clave del sistema
+enabled: true
+tags: ["reporting", "daily", "automatico"]
+
+consts:
+  report_time_range: "24h"
+
+triggers:
+  - type: scheduled
+    with:
+      schedule: "0 8 * * *"  # Diario a las 8am
+
+steps:
+  # Conteo de logs por severidad
+  - name: logs_por_severidad
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        range:
+          "@timestamp":
+            gte: "now-{{consts.report_time_range}}"
+      size: 0
+      aggregations:
+        por_nivel:
+          terms:
+            field: "log.level"
+            size: 10
+  
+  # Servicios más activos
+  - name: top_servicios
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        range:
+          "@timestamp":
+            gte: "now-{{consts.report_time_range}}"
+      size: 0
+      aggregations:
+        servicios:
+          terms:
+            field: "service.name"
+            size: 10
+  
+  # Errores del día
+  - name: contar_errores
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.report_time_range}}"
+      size: 0
+  
+  # Generar reporte
+  - name: generar_reporte
+    type: console
+    with:
+      message: |
+        ═══════════════════════════════════════════════════════
+        📊 REPORTE DIARIO - {{now | date: "%Y-%m-%d"}}
+        ═══════════════════════════════════════════════════════
+        
+        📅 Periodo: Últimas {{consts.report_time_range}}
+        🕐 Generado: {{now | date: "%Y-%m-%d %H:%M:%S"}}
+        
+        ───────────────────────────────────────────────────────
+        📈 RESUMEN GENERAL
+        ───────────────────────────────────────────────────────
+        
+        Total de logs: {{steps.logs_por_severidad.output.hits.total.value}}
+        Total de errores: {{steps.contar_errores.output.hits.total.value}}
+        
+        Distribución por severidad:
+        {% for bucket in steps.logs_por_severidad.output.aggregations.por_nivel.buckets %}
+        - {{bucket.key | upcase}}: {{bucket.doc_count}}
+        {% endfor %}
+        
+        ───────────────────────────────────────────────────────
+        🏆 TOP 5 SERVICIOS MÁS ACTIVOS
+        ───────────────────────────────────────────────────────
+        {% for bucket in steps.top_servicios.output.aggregations.servicios.buckets limit:5 %}
+        {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}} logs
+        {% endfor %}
+        
+        ───────────────────────────────────────────────────────
+        ✅ SALUD DEL SISTEMA
+        ───────────────────────────────────────────────────────
+        {% assign error_rate = steps.contar_errores.output.hits.total.value | times: 100 | divided_by: steps.logs_por_severidad.output.hits.total.value %}
+        Tasa de errores: {{error_rate | round: 2}}%
+        
+        Estado: {% if error_rate < 1 %}✅ EXCELENTE{% elsif error_rate < 5 %}⚠️ ACEPTABLE{% else %}🚨 REVISAR{% endif %}
+        
+        ═══════════════════════════════════════════════════════
+        
+        💡 Este reporte se enviaría por email en producción
+        
+# ═══════════════════════════════════════════════════════════════
+# Para enviar por email, añadir:
+# - name: enviar_email
+#   type: email.send
+#   with:
+#     to: "equipo@empresa.com"
+#     subject: "Reporte Diario - {{now | date: '%Y-%m-%d'}}"
+#     body: "{{steps.generar_reporte.output}}"
+# ═══════════════════════════════════════════════════════════════
+

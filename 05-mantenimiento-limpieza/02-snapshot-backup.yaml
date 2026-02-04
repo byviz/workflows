@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Snapshot Automático
+# ═══════════════════════════════════════════════════════════════
+name: snapshot-backup
+description: Crea snapshots automáticos de índices críticos
+enabled: true
+tags: ["backup", "snapshot", "disaster-recovery"]
+
+consts:
+  repository: "my_backup_repo"
+  indices_to_backup: "logs-critical-*,metrics-*"
+
+triggers:
+  - type: scheduled
+    with:
+      schedule: "0 1 * * *"  # Diario a la 1am
+
+steps:
+  - name: verificar_indices
+    type: elasticsearch.search
+    with:
+      index: "{{consts.indices_to_backup}}"
+      query:
+        match_all: {}
+      size: 0
+  
+  - name: reporte_backup
+    type: console
+    with:
+      message: |
+        💾 BACKUP PROGRAMADO
+        
+        Repositorio: {{consts.repository}}
+        Índices: {{consts.indices_to_backup}}
+        Total docs: {{steps.verificar_indices.output.hits.total.value}}
+        Timestamp: {{now | date: "%Y-%m-%d %H:%M"}}
+        
+        ⚠️ Para crear snapshots reales:
+        
+        1. Configurar snapshot repository:
+        PUT /_snapshot/{{consts.repository}}
+        {
+          "type": "fs",
+          "settings": {
+            "location": "/mount/backups"
+          }
+        }
+        
+        2. Crear snapshot:
+        PUT /_snapshot/{{consts.repository}}/snapshot-{{now | date: "%Y%m%d"}}
+        {
+          "indices": "{{consts.indices_to_backup}}",
+          "ignore_unavailable": true,
+          "include_global_state": false
+        }
+

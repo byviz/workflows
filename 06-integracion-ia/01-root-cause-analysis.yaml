@@ -1,0 +1,190 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Root Cause Analysis con IA
+# ═══════════════════════════════════════════════════════════════
+name: root-cause-analysis-ai
+description: |
+  Usa agentes de IA para analizar incidentes y determinar causa raíz.
+  
+  El agente analiza:
+  - Logs de error
+  - Métricas de sistema
+  - Traces APM
+  - Contexto histórico
+  
+  Y genera:
+  - Causa raíz probable
+  - Impacto estimado
+  - Recomendaciones de solución
+  - Pasos de remediación
+  
+enabled: true
+tags: ["ia", "rca", "analisis", "agente"]
+
+consts:
+  ai_agent_id: "root-cause-analyzer"  # ID del agente configurado en Agent Builder
+
+triggers:
+  - type: alert
+
+steps:
+  # 1. Recopilar contexto del incidente
+  - name: recopilar_logs_error
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-15m"
+      size: 20
+      sort:
+        - "@timestamp": desc
+  
+  # 2. Obtener métricas de sistema
+  - name: obtener_metricas
+    type: elasticsearch.search
+    with:
+      index: "metrics-system-*"
+      query:
+        range:
+          "@timestamp":
+            gte: "now-15m"
+      size: 50
+      _source:
+        - "system.cpu.total.pct"
+        - "system.memory.used.pct"
+        - "system.load.1"
+        - "host.name"
+  
+  # 3. Buscar traces relacionados
+  - name: obtener_traces
+    type: elasticsearch.search
+    with:
+      index: "traces-apm-*"
+      query:
+        bool:
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-15m"
+            - exists:
+                field: "error.message"
+      size: 10
+  
+  # 4. Preparar contexto para el agente IA
+  - name: preparar_contexto
+    type: console
+    with:
+      message: |
+        📋 CONTEXTO PARA ANÁLISIS IA
+        ════════════════════════════════════════════════════
+        
+        ERRORES DETECTADOS: {{steps.recopilar_logs_error.output.hits.total.value}}
+        
+        Últimos errores:
+        {% for hit in steps.recopilar_logs_error.output.hits.hits limit:5 %}
+        - [{{hit._source.@timestamp}}] {{hit._source.service.name}}: {{hit._source.message}}
+        {% endfor %}
+        
+        MÉTRICAS DE SISTEMA:
+        {% for hit in steps.obtener_metricas.output.hits.hits limit:3 %}
+        - Host: {{hit._source.host.name}}
+          CPU: {{hit._source.system.cpu.total.pct | times: 100 | round: 2}}%
+          Memory: {{hit._source.system.memory.used.pct | times: 100 | round: 2}}%
+        {% endfor %}
+        
+        TRACES CON ERROR: {{steps.obtener_traces.output.hits.total.value}}
+  
+  # 5. Llamar al agente IA (simulado)
+  # En producción, usar el step agent.query cuando esté disponible
+  - name: consultar_agente_ia
+    type: console
+    with:
+      message: |
+        ═══════════════════════════════════════════════════════
+        🤖 ANÁLISIS DE IA - ROOT CAUSE ANALYSIS
+        ═══════════════════════════════════════════════════════
+        
+        ⚠️ NOTA: Este es un ejemplo simulado.
+        
+        Para implementación real con Agent Builder:
+        
+        1. Configurar agente en Elastic:
+           - Kibana → Search → Agent Builder
+           - Crear agente "root-cause-analyzer"
+           - Conectar con LLM (OpenAI, Bedrock, etc.)
+           - Definir knowledge base y tools
+        
+        2. Usar en workflow:
+           - name: consultar_agente
+             type: agent.query
+             with:
+               agent_id: "{{consts.ai_agent_id}}"
+               query: "Analiza estos {{steps.recopilar_logs_error.output.hits.total.value}} errores..."
+               context:
+                 logs: "{{steps.recopilar_logs_error.output}}"
+                 metrics: "{{steps.obtener_metricas.output}}"
+                 traces: "{{steps.obtener_traces.output}}"
+        
+        ════════════════════════════════════════════════════════
+        
+        📊 ANÁLISIS SIMULADO (lo que el agente generaría):
+        
+        🔍 CAUSA RAÍZ IDENTIFICADA:
+        Basado en el análisis de logs, métricas y traces:
+        
+        - Alto uso de memoria (>90%) en host-prod-01
+        - Connection pool exhausted en servicio-api
+        - Spike de errores coincide con deploy reciente
+        
+        💡 CAUSA PROBABLE:
+        Memory leak introducido en última versión, causando
+        agotamiento de connection pool y cascading failures.
+        
+        🎯 RECOMENDACIONES:
+        1. Rollback inmediato a versión anterior estable
+        2. Reiniciar instancias afectadas
+        3. Aumentar timeout de connections temporalmente
+        4. Investigar código del último deploy
+        5. Implementar circuit breaker si no existe
+        
+        📈 IMPACTO ESTIMADO:
+        - Severidad: HIGH
+        - Servicios afectados: 3
+        - Usuarios impactados: ~500-1000
+        - Downtime estimado: 15-20 minutos
+        
+        ⏱️  TIEMPO ESTIMADO DE RESOLUCIÓN:
+        - Con rollback: 10-15 minutos
+        - Fix en código: 2-4 horas
+        
+        ════════════════════════════════════════════════════════
+        
+        💭 El agente IA real proveería:
+        ✓ Análisis más profundo del contexto histórico
+        ✓ Correlación con incidentes similares pasados
+        ✓ Confianza del análisis (score)
+        ✓ Referencias a documentación relevante
+        ✓ Scripts de remediación automática
+        ✓ Predicción de impacto futuro
+
+# ═══════════════════════════════════════════════════════════════
+# BENEFICIOS DE RCA CON IA
+# ═══════════════════════════════════════════════════════════════
+#
+# ✅ Análisis en segundos vs horas manualmente
+# ✅ Correlación de múltiples fuentes de datos
+# ✅ Identificación de patrones no obvios
+# ✅ Recomendaciones contextualizadas
+# ✅ Aprendizaje de incidentes pasados
+# ✅ Reducción de MTTR (Mean Time To Resolution)
+# ✅ Documentación automática del análisis
+# ✅ Disponible 24/7 sin fatiga humana
+#
+# ═══════════════════════════════════════════════════════════════
+

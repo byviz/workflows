@@ -1,0 +1,447 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Guía Completa de Liquid Templating
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Ejemplos exhaustivos de templating con Liquid
+# Caso de uso: Aprender sintaxis Liquid para workflows complejos
+# Requisitos: Elastic 9.3+
+# Autor: Iván Frías Molina - Byviz Analytics
+# URL: https://byviz.ai/workflows
+# ═══════════════════════════════════════════════════════════════
+
+name: liquid-templating-guide
+description: |
+  Guía completa de Liquid templating en Elastic Workflows.
+  
+  Liquid es el lenguaje de templating usado para:
+  - Acceder a variables (inputs, consts, outputs de steps)
+  - Interpolar valores dinámicos
+  - Condicionales y loops
+  - Filtros y transformaciones
+  
+  Este workflow cubre:
+  ✓ Variables y acceso a datos
+  ✓ Condicionales (if/elsif/else)
+  ✓ Loops (for)
+  ✓ Filtros comunes
+  ✓ Operadores
+  ✓ Funciones de fecha/string
+  
+enabled: true
+tags: ["basico", "liquid", "templating", "tutorial"]
+
+# ───────────────────────────────────────────────────────────────
+consts:
+  app_name: "MiApp"
+  version: "2.5.1"
+  threshold: 75
+  environment: "production"
+
+inputs:
+  - name: user_name
+    type: string
+    default: "admin"
+    required: false
+
+# ───────────────────────────────────────────────────────────────
+triggers:
+  - type: manual
+
+# ───────────────────────────────────────────────────────────────
+steps:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECCIÓN 1: VARIABLES Y ACCESO A DATOS
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  - name: seccion_1_variables
+    type: console
+    with:
+      message: |
+        ════════════════════════════════════════════════
+        📝 SECCIÓN 1: VARIABLES Y ACCESO A DATOS
+        ════════════════════════════════════════════════
+        
+        1️⃣  SINTAXIS BÁSICA - Interpolación simple
+        {{consts.app_name}} → Acceder a constante
+        {{inputs.user_name}} → Acceder a input
+        {{now}} → Timestamp actual
+        
+        Ejemplos:
+        - App: {{consts.app_name}}
+        - Usuario: {{inputs.user_name}}
+        - Timestamp: {{now}}
+        
+        ────────────────────────────────────────────────
+        
+        2️⃣  ACCESO A OBJETOS ANIDADOS
+        {{steps.step_name.output.hits.total.value}}
+        
+        Navegación con puntos:
+        - consts.app_name
+        - consts.environment
+        - consts.version
+        
+        ────────────────────────────────────────────────
+        
+        3️⃣  VALORES ACTUALES:
+        Constantes definidas:
+        - app_name = {{consts.app_name}}
+        - version = {{consts.version}}
+        - threshold = {{consts.threshold}}
+        - environment = {{consts.environment}}
+        
+        Inputs recibidos:
+        - user_name = {{inputs.user_name}}
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECCIÓN 2: BÚSQUEDA PARA EJEMPLOS
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  - name: buscar_datos
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        match_all: {}
+      size: 5
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECCIÓN 3: CONDICIONALES (IF/ELSIF/ELSE)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  - name: seccion_3_condicionales
+    type: console
+    with:
+      message: |
+        ════════════════════════════════════════════════
+        🔀 SECCIÓN 3: CONDICIONALES
+        ════════════════════════════════════════════════
+        
+        SINTAXIS IF/ELSIF/ELSE:
+        {% if condicion %}
+          Texto si true
+        {% elsif otra_condicion %}
+          Texto si segunda condición true
+        {% else %}
+          Texto si todas false
+        {% endif %}
+        
+        ────────────────────────────────────────────────
+        
+        OPERADORES DE COMPARACIÓN:
+        ==  → igual
+        !=  → diferente
+        >   → mayor que
+        <   → menor que
+        >=  → mayor o igual
+        <=  → menor o igual
+        
+        ────────────────────────────────────────────────
+        
+        OPERADORES LÓGICOS:
+        and → AND lógico
+        or  → OR lógico
+        
+        ────────────────────────────────────────────────
+        
+        EJEMPLOS PRÁCTICOS:
+        
+        1️⃣  Comparación numérica:
+        {% if steps.buscar_datos.output.hits.total.value > 0 %}
+        ✅ Se encontraron {{steps.buscar_datos.output.hits.total.value}} documentos
+        {% else %}
+        ❌ No se encontraron documentos
+        {% endif %}
+        
+        2️⃣  Comparación de strings:
+        {% if consts.environment == "production" %}
+        🏭 Entorno: PRODUCCIÓN
+        {% elsif consts.environment == "staging" %}
+        🧪 Entorno: STAGING
+        {% else %}
+        💻 Entorno: DESARROLLO
+        {% endif %}
+        
+        3️⃣  Operadores lógicos:
+        {% if steps.buscar_datos.output.hits.total.value > 0 and consts.environment == "production" %}
+        ⚠️  Datos encontrados en PRODUCCIÓN - revisar
+        {% else %}
+        ✅ Situación normal
+        {% endif %}
+        
+        4️⃣  Comparación con constantes:
+        {% if steps.buscar_datos.output.hits.total.value >= consts.threshold %}
+        🚨 ALERTA: Supera umbral ({{consts.threshold}})
+        {% else %}
+        ✅ Dentro de umbrales normales
+        {% endif %}
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECCIÓN 4: LOOPS (FOR)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  - name: seccion_4_loops
+    type: console
+    with:
+      message: |
+        ════════════════════════════════════════════════
+        🔁 SECCIÓN 4: LOOPS (FOR)
+        ════════════════════════════════════════════════
+        
+        SINTAXIS FOR:
+        {% for item in array %}
+          {{item.propiedad}}
+        {% endfor %}
+        
+        ────────────────────────────────────────────────
+        
+        VARIABLES ESPECIALES EN LOOPS:
+        - loop.index → Índice actual (empieza en 1)
+        - loop.index0 → Índice actual (empieza en 0)
+        - loop.first → true si es primera iteración
+        - loop.last → true si es última iteración
+        - loop.length → Total de elementos
+        
+        ────────────────────────────────────────────────
+        
+        EJEMPLOS:
+        
+        1️⃣  Loop básico sobre resultados:
+        {% for hit in steps.buscar_datos.output.hits.hits %}
+        [{{loop.index}}] ID: {{hit._id}}
+        {% endfor %}
+        
+        ────────────────────────────────────────────────
+        
+        2️⃣  Loop con límite:
+        Primeros 3 documentos:
+        {% for hit in steps.buscar_datos.output.hits.hits limit:3 %}
+        {{loop.index}}. {{hit._source.message | default: "Sin mensaje"}}
+        {% endfor %}
+        
+        ────────────────────────────────────────────────
+        
+        3️⃣  Loop con condicionales:
+        {% for hit in steps.buscar_datos.output.hits.hits %}
+        {% if loop.first %}
+        🥇 Primer documento: {{hit._id}}
+        {% elsif loop.last %}
+        🏁 Último documento: {{hit._id}}
+        {% else %}
+        📄 Documento {{loop.index}}: {{hit._id}}
+        {% endif %}
+        {% endfor %}
+        
+        ────────────────────────────────────────────────
+        
+        4️⃣  Loop vacío:
+        {% for hit in steps.buscar_datos.output.hits.hits %}
+        - {{hit._id}}
+        {% else %}
+        ℹ️  No hay documentos para iterar
+        {% endfor %}
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECCIÓN 5: FILTROS COMUNES
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  - name: seccion_5_filtros
+    type: console
+    with:
+      message: |
+        ════════════════════════════════════════════════
+        🎛️  SECCIÓN 5: FILTROS
+        ════════════════════════════════════════════════
+        
+        Los filtros transforman valores con la sintaxis:
+        {{valor | filtro: parametros}}
+        
+        ────────────────────────────────────────────────
+        
+        📝 FILTROS DE STRING:
+        
+        upcase → Mayúsculas
+        {{consts.environment | upcase}} = {{consts.environment | upcase}}
+        
+        downcase → Minúsculas
+        {{consts.environment | downcase}} = {{consts.environment | downcase}}
+        
+        capitalize → Primera letra mayúscula
+        {{consts.environment | capitalize}} = {{consts.environment | capitalize}}
+        
+        replace → Reemplazar texto
+        {{"Hola Mundo" | replace: "Mundo", "Elastic"}} = {{"Hola Mundo" | replace: "Mundo", "Elastic"}}
+        
+        split → Dividir string
+        {{"a,b,c" | split: ","}} → Array [a, b, c]
+        
+        ────────────────────────────────────────────────
+        
+        🔢 FILTROS NUMÉRICOS:
+        
+        plus → Sumar
+        {{consts.threshold | plus: 10}} = {{consts.threshold | plus: 10}}
+        
+        minus → Restar
+        {{consts.threshold | minus: 5}} = {{consts.threshold | minus: 5}}
+        
+        times → Multiplicar
+        {{consts.threshold | times: 2}} = {{consts.threshold | times: 2}}
+        
+        divided_by → Dividir
+        {{consts.threshold | divided_by: 3}} = {{consts.threshold | divided_by: 3}}
+        
+        round → Redondear
+        {{33.7 | round}} = 34
+        
+        ────────────────────────────────────────────────
+        
+        📅 FILTROS DE FECHA:
+        
+        date → Formatear fecha
+        {{now | date: "%Y-%m-%d"}} = {{now | date: "%Y-%m-%d"}}
+        {{now | date: "%H:%M:%S"}} = {{now | date: "%H:%M:%S"}}
+        {{now | date: "%d/%m/%Y %H:%M"}} = {{now | date: "%d/%m/%Y %H:%M"}}
+        
+        Formatos:
+        - %Y → Año (2026)
+        - %m → Mes (02)
+        - %d → Día (04)
+        - %H → Hora 24h (14)
+        - %M → Minuto (30)
+        - %S → Segundo (45)
+        
+        ────────────────────────────────────────────────
+        
+        🛡️  FILTROS DE SEGURIDAD:
+        
+        default → Valor por defecto si null
+        {{variable_inexistente | default: "N/A"}} = {{variable_inexistente | default: "N/A"}}
+        
+        ────────────────────────────────────────────────
+        
+        📊 FILTROS DE ARRAYS:
+        
+        size → Tamaño del array
+        Total hits: {{steps.buscar_datos.output.hits.hits | size}}
+        
+        first → Primer elemento
+        last → Último elemento
+        join → Unir array con separador
+        
+        ────────────────────────────────────────────────
+        
+        🔗 COMBINAR FILTROS:
+        {{consts.app_name | upcase | replace: "MI", "TU"}} = {{consts.app_name | upcase | replace: "MI", "TU"}}
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECCIÓN 6: CASOS DE USO REALES
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  - name: seccion_6_casos_reales
+    type: console
+    with:
+      message: |
+        ════════════════════════════════════════════════
+        💼 SECCIÓN 6: CASOS DE USO REALES
+        ════════════════════════════════════════════════
+        
+        1️⃣  REPORTES FORMATEADOS:
+        
+        📊 Reporte de {{consts.app_name}} v{{consts.version}}
+        Generado: {{now | date: "%d/%m/%Y a las %H:%M"}}
+        Usuario: {{inputs.user_name | upcase}}
+        Entorno: {{consts.environment | capitalize}}
+        
+        Total documentos: {{steps.buscar_datos.output.hits.total.value}}
+        Tiempo de búsqueda: {{steps.buscar_datos.output.took}}ms
+        
+        ────────────────────────────────────────────────
+        
+        2️⃣  ALERTAS DINÁMICAS:
+        
+        {% if steps.buscar_datos.output.hits.total.value > consts.threshold %}
+        🚨 ALERTA: {{consts.app_name | upcase}}
+        
+        Se detectaron {{steps.buscar_datos.output.hits.total.value}} eventos
+        Umbral configurado: {{consts.threshold}}
+        Exceso: {{steps.buscar_datos.output.hits.total.value | minus: consts.threshold}}
+        
+        Severidad: {% if steps.buscar_datos.output.hits.total.value > 100 %}CRÍTICA{% else %}MEDIA{% endif %}
+        {% endif %}
+        
+        ────────────────────────────────────────────────
+        
+        3️⃣  LISTADOS NUMERADOS:
+        
+        Documentos encontrados:
+        {% for hit in steps.buscar_datos.output.hits.hits limit:5 %}
+        {{loop.index}}. [{{hit._source.@timestamp | default: "Sin fecha"}}]
+           ID: {{hit._id}}
+           Índice: {{hit._index}}
+        {% endfor %}
+        
+        ────────────────────────────────────────────────
+        
+        4️⃣  RESUMEN EJECUTIVO:
+        
+        ┌─────────────────────────────────────────────┐
+        │  RESUMEN EJECUTIVO                          │
+        ├─────────────────────────────────────────────┤
+        │  Aplicación: {{consts.app_name}}
+        │  Versión: {{consts.version}}
+        │  Entorno: {{consts.environment | upcase}}
+        │  Fecha: {{now | date: "%Y-%m-%d %H:%M"}}
+        ├─────────────────────────────────────────────┤
+        │  Documentos analizados: {{steps.buscar_datos.output.hits.total.value}}
+        │  Estado: {% if steps.buscar_datos.output.hits.total.value < consts.threshold %}✅ NORMAL{% else %}⚠️  REVISAR{% endif %}
+        └─────────────────────────────────────────────┘
+
+# ═══════════════════════════════════════════════════════════════
+# CHEATSHEET RÁPIDO
+# ═══════════════════════════════════════════════════════════════
+#
+# VARIABLES:
+#   {{inputs.nombre}}                  → Input
+#   {{consts.valor}}                   → Constante
+#   {{steps.nombre.output.path}}       → Output de step
+#   {{now}}                            → Timestamp actual
+#
+# CONDICIONALES:
+#   {% if condicion %}...{% endif %}
+#   {% if x %}...{% elsif y %}...{% else %}...{% endif %}
+#
+# OPERADORES:
+#   ==  !=  >  <  >=  <=              → Comparación
+#   and  or                            → Lógicos
+#
+# LOOPS:
+#   {% for item in array %}...{% endfor %}
+#   {{loop.index}}                     → Índice (1-based)
+#   {{loop.first}}                     → Primera iteración
+#   {{loop.last}}                      → Última iteración
+#
+# FILTROS STRING:
+#   | upcase  | downcase  | capitalize
+#   | replace: "old", "new"
+#   | split: ","
+#   | default: "valor"
+#
+# FILTROS NUMÉRICOS:
+#   | plus: 10  | minus: 5
+#   | times: 2  | divided_by: 3
+#   | round
+#
+# FILTROS FECHA:
+#   | date: "%Y-%m-%d"
+#   | date: "%H:%M:%S"
+#   | date: "%d/%m/%Y %H:%M"
+#
+# FILTROS ARRAY:
+#   | size  | first  | last
+#   | join: ", "
+#
+# COMBINAR FILTROS:
+#   {{valor | filtro1 | filtro2 | filtro3}}
+#
+# ═══════════════════════════════════════════════════════════════
+

@@ -1,0 +1,143 @@
+# ═══════════════════════════════════════════════════════════════
+# PLANTILLA: Workflow de Alerting
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Template base para workflows de alerting
+# Uso: Copiar y personalizar según necesidades
+# ═══════════════════════════════════════════════════════════════
+
+name: template-alerting
+description: |
+  Plantilla base para workflows de alerting.
+  
+  Personaliza:
+  1. Cambiar name y description
+  2. Ajustar consts según tus umbrales
+  3. Modificar query según tus índices
+  4. Personalizar acciones (notificaciones, tickets, etc.)
+  
+enabled: false  # Activar después de personalizar
+tags: ["template", "alerting"]
+
+# ───────────────────────────────────────────────────────────────
+# CONSTANTES - Ajustar según tu entorno
+# ───────────────────────────────────────────────────────────────
+consts:
+  index: "logs-*"                    # Índice a monitorear
+  threshold: 100                     # Umbral de alerta
+  time_window: "10m"                 # Ventana de tiempo
+  alert_channel: "#alerts"           # Canal de notificación
+
+# ───────────────────────────────────────────────────────────────
+# TRIGGER - Cambiar según necesidad
+# ───────────────────────────────────────────────────────────────
+triggers:
+  - type: manual  # Cambiar a 'alert' o 'scheduled' según caso
+
+# ───────────────────────────────────────────────────────────────
+# STEPS
+# ───────────────────────────────────────────────────────────────
+steps:
+  # Step 1: Detectar condición de alerta
+  - name: detectar_problema
+    type: elasticsearch.search
+    with:
+      index: "{{consts.index}}"
+      
+      # ⚠️ PERSONALIZAR esta query según tu caso
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"  # Cambiar campo y valor
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.time_window}}"
+      
+      size: 10
+      
+      # Agregar para más contexto
+      aggregations:
+        por_servicio:
+          terms:
+            field: "service.name"
+            size: 10
+  
+  # Step 2: Evaluar severidad
+  - name: evaluar_severidad
+    type: if
+    with:
+      condition: "{{steps.detectar_problema.output.hits.total.value >= consts.threshold}}"
+      then:
+        - type: console
+          with:
+            message: "⚠️ Umbral superado: {{steps.detectar_problema.output.hits.total.value}}"
+      else:
+        - type: console
+          with:
+            message: "✅ Dentro de umbrales normales"
+  
+  # Step 3: Generar contexto
+  - name: generar_contexto
+    type: console
+    with:
+      message: |
+        ═══════════════════════════════════════════════════════
+        🚨 ALERTA
+        ═══════════════════════════════════════════════════════
+        
+        Timestamp: {{now | date: "%Y-%m-%d %H:%M:%S"}}
+        Total: {{steps.detectar_problema.output.hits.total.value}}
+        Umbral: {{consts.threshold}}
+        Ventana: {{consts.time_window}}
+        
+        Top servicios afectados:
+        {% for bucket in steps.detectar_problema.output.aggregations.por_servicio.buckets limit:5 %}
+        - {{bucket.key}}: {{bucket.doc_count}}
+        {% endfor %}
+        
+        Primeros eventos:
+        {% for hit in steps.detectar_problema.output.hits.hits limit:3 %}
+        - [{{hit._source.@timestamp}}] {{hit._source.message | truncate: 100}}
+        {% endfor %}
+        
+        ═══════════════════════════════════════════════════════
+  
+  # Step 4: Acciones (personalizar según necesidad)
+  - name: ejecutar_acciones
+    type: console
+    with:
+      message: |
+        💡 ACCIONES A IMPLEMENTAR:
+        
+        Notificaciones:
+        - [ ] Slack/Teams al canal {{consts.alert_channel}}
+        - [ ] Email al equipo responsable
+        - [ ] PagerDuty si es crítico
+        
+        Tickets:
+        - [ ] Crear ticket en Jira/ServiceNow
+        - [ ] Asignar según severidad y servicio
+        
+        Remediación:
+        - [ ] Ejecutar health checks
+        - [ ] Trigger runbooks automáticos
+        - [ ] Escalar si persiste
+
+# ═══════════════════════════════════════════════════════════════
+# CHECKLIST DE PERSONALIZACIÓN
+# ═══════════════════════════════════════════════════════════════
+# 
+# [ ] Cambiar name a nombre descriptivo
+# [ ] Actualizar description
+# [ ] Ajustar consts (índice, umbrales, etc.)
+# [ ] Modificar query según campos reales
+# [ ] Personalizar agregaciones
+# [ ] Implementar notificaciones reales
+# [ ] Configurar triggers (alert, scheduled)
+# [ ] Testear con datos reales
+# [ ] Ajustar enabled: true
+# [ ] Documentar caso de uso específico
+# 
+# ═══════════════════════════════════════════════════════════════
+

@@ -1,0 +1,84 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Eliminar Índices Antiguos
+# ═══════════════════════════════════════════════════════════════
+name: delete-old-indices
+description: Elimina índices más antiguos que X días para liberar espacio
+enabled: false  # ⚠️ Disabled por seguridad - habilitar con precaución
+tags: ["mantenimiento", "limpieza", "indices"]
+
+consts:
+  retention_days: 30
+  index_pattern: "logs-*"
+
+triggers:
+  - type: scheduled
+    with:
+      schedule: "0 2 * * 0"  # Domingos a las 2am
+
+steps:
+  # 1. Listar índices antiguos
+  - name: identificar_indices_antiguos
+    type: console
+    with:
+      message: |
+        🔍 Buscando índices más antiguos que {{consts.retention_days}} días
+        Patrón: {{consts.index_pattern}}
+        
+        ⚠️  NOTA: En este ejemplo, la eliminación está simulada.
+        
+        Para implementar eliminación real:
+        1. Usar ILM (Index Lifecycle Management) es la mejor práctica
+        2. O usar API de Elasticsearch vía http.request
+        
+        Ejemplo con ILM:
+        - Kibana → Stack Management → Index Lifecycle Policies
+        - Crear policy con hot/warm/cold/delete phases
+        - Aplicar a index templates
+  
+  # 2. Simular análisis
+  - name: analizar_impacto
+    type: elasticsearch.search
+    with:
+      index: "{{consts.index_pattern}}"
+      query:
+        range:
+          "@timestamp":
+            lt: "now-{{consts.retention_days}}d"
+      size: 0
+  
+  # 3. Reporte
+  - name: reporte_limpieza
+    type: console
+    with:
+      message: |
+        📋 REPORTE DE LIMPIEZA
+        
+        Documentos más antiguos que {{consts.retention_days}} días: {{steps.analizar_impacto.output.hits.total.value}}
+        
+        ⚠️  RECOMENDACIÓN: Usar ILM en lugar de workflows para gestión de índices
+        
+        ILM ofrece:
+        ✅ Gestión automática del ciclo de vida
+        ✅ Hot/Warm/Cold tiers
+        ✅ Rollover automático
+        ✅ Eliminación segura con políticas
+        ✅ Snapshots antes de delete
+
+# ═══════════════════════════════════════════════════════════════
+# ⚠️ IMPORTANTE - ELIMINACIÓN DE ÍNDICES
+# ═══════════════════════════════════════════════════════════════
+# 
+# NO uses workflows para eliminar índices sin precauciones:
+# 
+# 1. MEJOR PRÁCTICA: Usa ILM (Index Lifecycle Management)
+# 2. Si usas workflows, implementa:
+#    - Confirmación manual antes de delete
+#    - Snapshot automático previo
+#    - Lista blanca/negra de índices
+#    - Logs de auditoría
+#    - Dry-run mode
+# 
+# 3. Testea en entorno no productivo primero
+# 4. Ten plan de recuperación (backups)
+# ═══════════════════════════════════════════════════════════════
+

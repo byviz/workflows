@@ -1,0 +1,110 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Scheduled Trigger Básico
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Workflow con programación automática usando cron
+# Caso de uso: Tareas periódicas, chequeos regulares, reporting
+# Requisitos: Elastic 9.3+
+# Autor: Iván Frías Molina - Byviz Analytics
+# URL: https://byviz.ai/workflows
+# ═══════════════════════════════════════════════════════════════
+
+name: scheduled-basic
+description: |
+  Workflow con trigger scheduled que se ejecuta automáticamente.
+  
+  Este workflow se ejecuta cada hora y:
+  1. Busca documentos creados en la última hora
+  2. Cuenta cuántos hay
+  3. Registra el resultado en consola
+  
+  Perfecto para entender programación con cron.
+  
+enabled: true
+tags: ["basico", "scheduled", "automatico"]
+
+# ───────────────────────────────────────────────────────────────
+# TRIGGERS
+# ───────────────────────────────────────────────────────────────
+# Scheduled: Se ejecuta automáticamente según el schedule
+triggers:
+  - type: scheduled
+    with:
+      # Ejecutar cada hora (minuto 0 de cada hora)
+      # Sintaxis cron: minute hour day month weekday
+      schedule: "0 * * * *"
+      
+      # Ejemplos de otros schedules:
+      # "*/5 * * * *"    → Cada 5 minutos
+      # "0 0 * * *"      → Diario a medianoche
+      # "0 9 * * MON"    → Lunes a las 9am
+      # "0 0 * * 0"      → Domingos a medianoche
+      # "0 8-18 * * 1-5" → Cada hora entre 8am-6pm, lunes a viernes
+
+# ───────────────────────────────────────────────────────────────
+# STEPS
+# ───────────────────────────────────────────────────────────────
+steps:
+  # Step 1: Buscar documentos de la última hora
+  - name: buscar_documentos_recientes
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      
+      # Query con filtro de tiempo
+      query:
+        bool:
+          filter:
+            - range:
+                "@timestamp":
+                  # Últimos 60 minutos
+                  gte: "now-1h"
+                  lte: "now"
+      
+      # Solo necesitamos el conteo
+      size: 0
+      
+      # Agregar por nivel de log
+      aggregations:
+        por_nivel:
+          terms:
+            field: "log.level"
+            size: 10
+
+  # Step 2: Registrar estadísticas
+  - name: mostrar_estadisticas
+    type: console
+    with:
+      message: |
+        📊 Reporte Horario - {{now | date: "%Y-%m-%d %H:%M"}}
+        ════════════════════════════════════════════════
+        
+        Total documentos (última hora): {{steps.buscar_documentos_recientes.output.hits.total.value}}
+        
+        Desglose por nivel:
+        {% for bucket in steps.buscar_documentos_recientes.output.aggregations.por_nivel.buckets %}
+        - {{bucket.key}}: {{bucket.doc_count}}
+        {% endfor %}
+        
+        ════════════════════════════════════════════════
+        Próxima ejecución: En 1 hora
+
+# ═══════════════════════════════════════════════════════════════
+# CÓMO USAR ESTE WORKFLOW
+# ═══════════════════════════════════════════════════════════════
+# 1. Copia este YAML en Kibana → Stack Management → Workflows
+# 2. Ajusta el índice y campos según tu entorno
+# 3. Modifica el schedule según tus necesidades
+# 4. Guarda con enabled: true para activar
+# 5. El workflow se ejecutará automáticamente
+#
+# 📝 TESTING:
+# - Para probar, cambia el schedule a "*/5 * * * *" (cada 5 minutos)
+# - O ejecuta manualmente cambiando trigger a "manual"
+# - Revisa el historial de ejecuciones para ver todas las corridas
+#
+# ⚠️ IMPORTANTE:
+# - No uses schedules muy frecuentes (< 1 minuto) en producción
+# - Considera el impacto en el cluster
+# - Usa enabled: false para pausar sin eliminar el workflow
+# ═══════════════════════════════════════════════════════════════
+

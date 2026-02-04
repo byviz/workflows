@@ -1,0 +1,151 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Alert Trigger Básico
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Workflow disparado automáticamente por una alerta
+# Caso de uso: Respuesta automática a incidentes
+# Requisitos: Elastic 9.3+, Alerta configurada en Kibana
+# Autor: Iván Frías Molina - Byviz Analytics
+# URL: https://byviz.ai/workflows
+# ═══════════════════════════════════════════════════════════════
+
+name: alert-trigger-basico
+description: |
+  Workflow que se ejecuta cuando una alerta se dispara.
+  
+  Este workflow:
+  1. Recibe datos de la alerta que lo disparó
+  2. Procesa la información del incidente
+  3. Registra o ejecuta acciones de respuesta
+  
+  Para usar este workflow, necesitas:
+  - Crear una alerta en Kibana (Stack Management → Alerts)
+  - Configurar la acción "Run Workflow"
+  - Seleccionar este workflow
+  
+enabled: true
+tags: ["basico", "alert", "respuesta-automatica"]
+
+# ───────────────────────────────────────────────────────────────
+# TRIGGERS
+# ───────────────────────────────────────────────────────────────
+# Alert: Se ejecuta cuando una alerta de Kibana se dispara
+triggers:
+  - type: alert
+    # El trigger alert recibe automáticamente:
+    # - alert.id: ID de la alerta
+    # - alert.name: Nombre de la alerta
+    # - alert.actionGroup: Grupo de acción
+    # - alert.params: Parámetros de la alerta
+    # - context: Contexto del incidente
+
+# ───────────────────────────────────────────────────────────────
+# STEPS
+# ───────────────────────────────────────────────────────────────
+steps:
+  # Step 1: Procesar información de la alerta
+  - name: analizar_alerta
+    type: console
+    with:
+      message: |
+        🚨 ALERTA RECIBIDA
+        ════════════════════════════════════════════════
+        
+        Nombre de la alerta: {{alert.name}}
+        ID: {{alert.id}}
+        Grupo de acción: {{alert.actionGroup}}
+        Timestamp: {{now | date: "%Y-%m-%d %H:%M:%S"}}
+        
+        ════════════════════════════════════════════════
+
+  # Step 2: Buscar más contexto sobre el incidente
+  - name: buscar_contexto_adicional
+    type: elasticsearch.search
+    with:
+      # Buscar en el índice relevante
+      index: "logs-*"
+      
+      query:
+        bool:
+          filter:
+            # Últimos 15 minutos (ajustar según la alerta)
+            - range:
+                "@timestamp":
+                  gte: "now-15m"
+                  lte: "now"
+      
+      # Obtener documentos recientes
+      size: 50
+      
+      sort:
+        - "@timestamp":
+            order: desc
+
+  # Step 3: Generar reporte del incidente
+  - name: generar_reporte
+    type: console
+    with:
+      message: |
+        📋 REPORTE DE INCIDENTE
+        ════════════════════════════════════════════════
+        
+        🚨 Alerta: {{alert.name}}
+        
+        📊 Análisis:
+        - Documentos relacionados: {{steps.buscar_contexto_adicional.output.hits.total.value}}
+        - Periodo analizado: Últimos 15 minutos
+        - Timestamp: {{now | date: "%Y-%m-%d %H:%M:%S"}}
+        
+        🔍 Primeros eventos:
+        {% for hit in steps.buscar_contexto_adicional.output.hits.hits limit:5 %}
+        - [{{hit._source.@timestamp}}] {{hit._source.message}}
+        {% endfor %}
+        
+        ════════════════════════════════════════════════
+        
+        ✅ Próximos pasos:
+        1. Revisar logs detallados en Kibana
+        2. Validar si requiere escalamiento
+        3. Documentar el incidente
+        
+        💡 Este es un ejemplo básico. En workflows reales puedes:
+        - Enviar notificaciones a Slack/Teams
+        - Crear tickets en Jira
+        - Ejecutar remediaciones automáticas
+        - Escalar según severidad
+
+# ═══════════════════════════════════════════════════════════════
+# CÓMO CONFIGURAR ESTE WORKFLOW
+# ═══════════════════════════════════════════════════════════════
+# 
+# 1. CREAR EL WORKFLOW:
+#    - Copia este YAML en Kibana → Stack Management → Workflows
+#    - Guarda el workflow
+#
+# 2. CREAR UNA ALERTA:
+#    - Ve a Stack Management → Alerts and Insights → Rules
+#    - Crea una nueva regla (ejemplo: "High Error Rate")
+#    - Configura las condiciones (ej: >100 errores en 5min)
+#
+# 3. CONECTAR WORKFLOW A LA ALERTA:
+#    - En la alerta, sección "Actions"
+#    - Añade una acción de tipo "Run Workflow"
+#    - Selecciona este workflow: "alert-trigger-basico"
+#    - Guarda la alerta
+#
+# 4. TESTING:
+#    - Para probar, dispara la alerta manualmente o espera a que se cumpla la condición
+#    - Revisa el historial de ejecuciones del workflow
+#
+# 📝 EJEMPLOS DE ALERTAS QUE PUEDEN USAR ESTE WORKFLOW:
+# - Tasa de errores alta
+# - CPU/memoria crítica
+# - Servicios caídos
+# - Transacciones lentas
+# - Patrones anómalos detectados por ML
+#
+# ⚠️ NOTAS:
+# - Ajusta el índice y campos según tu entorno
+# - Personaliza las acciones según tus necesidades
+# - En producción, añade notificaciones reales (Slack, email, etc.)
+# ═══════════════════════════════════════════════════════════════
+

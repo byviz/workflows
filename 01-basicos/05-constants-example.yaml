@@ -1,0 +1,260 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Ejemplo de Constantes
+# ═══════════════════════════════════════════════════════════════
+# Descripción: Uso de constantes para valores reutilizables
+# Caso de uso: Centralizar configuración, evitar hardcoding
+# Requisitos: Elastic 9.3+
+# Autor: Iván Frías Molina - Byviz Analytics
+# URL: https://byviz.ai/workflows
+# ═══════════════════════════════════════════════════════════════
+
+name: constants-example
+description: |
+  Workflow que demuestra el uso de CONSTANTES (consts).
+  
+  Las constantes permiten:
+  - Centralizar valores que se usan múltiples veces
+  - Facilitar mantenimiento (cambiar en un solo lugar)
+  - Mejorar legibilidad del workflow
+  - Evitar hardcoding de valores
+  
+  Diferencia con inputs:
+  - INPUTS: Configurables en cada ejecución
+  - CONSTS: Fijos en el workflow, no cambian por ejecución
+  
+enabled: true
+tags: ["basico", "constants", "configuracion"]
+
+# ───────────────────────────────────────────────────────────────
+# CONSTANTES
+# ───────────────────────────────────────────────────────────────
+# Valores fijos que se usan en múltiples steps
+consts:
+  # Configuración de índices
+  logs_index: "logs-app-production-*"
+  metrics_index: "metrics-system-*"
+  
+  # Umbrales
+  error_threshold: 100
+  warning_threshold: 50
+  
+  # Configuración de tiempo
+  time_window: "15m"
+  retention_days: 30
+  
+  # Configuración de alertas
+  alert_severity: "high"
+  alert_channel: "#alerts-production"
+  
+  # Otros valores reutilizables
+  max_results: 20
+  es_timeout: "30s"
+
+# ───────────────────────────────────────────────────────────────
+# TRIGGERS
+# ───────────────────────────────────────────────────────────────
+triggers:
+  - type: manual
+
+# ───────────────────────────────────────────────────────────────
+# STEPS
+# ───────────────────────────────────────────────────────────────
+steps:
+  # Step 1: Mostrar configuración
+  - name: mostrar_configuracion
+    type: console
+    with:
+      message: |
+        ⚙️  CONFIGURACIÓN DEL WORKFLOW
+        ════════════════════════════════════════════════
+        
+        📂 ÍNDICES:
+        - Logs: {{consts.logs_index}}
+        - Métricas: {{consts.metrics_index}}
+        
+        ⚠️  UMBRALES:
+        - Errores: {{consts.error_threshold}}
+        - Warnings: {{consts.warning_threshold}}
+        
+        ⏱️  TIEMPO:
+        - Ventana de análisis: {{consts.time_window}}
+        - Retención: {{consts.retention_days}} días
+        
+        🚨 ALERTAS:
+        - Severidad: {{consts.alert_severity}}
+        - Canal: {{consts.alert_channel}}
+        
+        ════════════════════════════════════════════════
+
+  # Step 2: Buscar errores usando constantes
+  - name: buscar_errores
+    type: elasticsearch.search
+    with:
+      # Usar constante para índice
+      index: "{{consts.logs_index}}"
+      
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"
+          
+          filter:
+            - range:
+                "@timestamp":
+                  # Usar constante para ventana de tiempo
+                  gte: "now-{{consts.time_window}}"
+                  lte: "now"
+      
+      # Usar constante para límite de resultados
+      size: "{{consts.max_results}}"
+      
+      # Usar constante para timeout
+      timeout: "{{consts.es_timeout}}"
+      
+      sort:
+        - "@timestamp":
+            order: desc
+
+  # Step 3: Evaluar si supera umbral
+  - name: evaluar_umbral
+    type: if
+    with:
+      # Comparar con constante error_threshold
+      condition: "{{steps.buscar_errores.output.hits.total.value > consts.error_threshold}}"
+      
+      then:
+        # Si supera el umbral
+        - type: console
+          with:
+            message: |
+              🚨 ALERTA CRÍTICA
+              ════════════════════════════════════════════════
+              
+              Se superó el umbral de errores!
+              
+              Errores detectados: {{steps.buscar_errores.output.hits.total.value}}
+              Umbral configurado: {{consts.error_threshold}}
+              Periodo: Últimos {{consts.time_window}}
+              Índice: {{consts.logs_index}}
+              
+              Severidad: {{consts.alert_severity | upcase}}
+              Notificar en: {{consts.alert_channel}}
+              
+              ⚠️  Acción requerida inmediata
+              ════════════════════════════════════════════════
+      
+      else:
+        # Si NO supera el umbral
+        - type: console
+          with:
+            message: |
+              ✅ SISTEMA NORMAL
+              ════════════════════════════════════════════════
+              
+              Errores detectados: {{steps.buscar_errores.output.hits.total.value}}
+              Umbral configurado: {{consts.error_threshold}}
+              
+              Sistema operando dentro de parámetros normales.
+              ════════════════════════════════════════════════
+
+  # Step 4: Buscar warnings usando las mismas constantes
+  - name: buscar_warnings
+    type: elasticsearch.search
+    with:
+      # Reutilizar constantes
+      index: "{{consts.logs_index}}"
+      
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "WARN"
+          
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-{{consts.time_window}}"
+                  lte: "now"
+      
+      size: 0  # Solo queremos el conteo
+
+  # Step 5: Reporte final
+  - name: reporte_final
+    type: console
+    with:
+      message: |
+        📊 REPORTE FINAL
+        ════════════════════════════════════════════════
+        
+        Periodo analizado: Últimos {{consts.time_window}}
+        Índice: {{consts.logs_index}}
+        
+        ERRORES: {{steps.buscar_errores.output.hits.total.value}} / {{consts.error_threshold}}
+        WARNINGS: {{steps.buscar_warnings.output.hits.total.value}} / {{consts.warning_threshold}}
+        
+        {% if steps.buscar_errores.output.hits.total.value > consts.error_threshold %}
+        🚨 Estado: CRÍTICO
+        {% elsif steps.buscar_warnings.output.hits.total.value > consts.warning_threshold %}
+        ⚠️  Estado: ADVERTENCIA
+        {% else %}
+        ✅ Estado: NORMAL
+        {% endif %}
+        
+        ════════════════════════════════════════════════
+        
+        💡 Las constantes facilitan:
+        - Cambiar configuración en un solo lugar
+        - Mantener consistency en todo el workflow
+        - Reutilizar valores múltiples veces
+        - Hacer el código más legible
+
+# ═══════════════════════════════════════════════════════════════
+# VENTAJAS DE USAR CONSTANTES
+# ═══════════════════════════════════════════════════════════════
+#
+# 1. MANTENIBILIDAD:
+#    - Cambiar un valor en un solo lugar
+#    - Si el índice cambia de nombre, actualizar una vez
+#    - Si cambian umbrales, modificar en la sección consts
+#
+# 2. LEGIBILIDAD:
+#    - {{consts.error_threshold}} es más claro que 100
+#    - El nombre describe el propósito del valor
+#    - Más fácil de entender para otros desarrolladores
+#
+# 3. REUTILIZACIÓN:
+#    - Usar el mismo valor en múltiples steps
+#    - Evitar inconsistencias por duplicación
+#    - Un cambio se aplica en todas partes
+#
+# 4. CONFIGURACIÓN CENTRALIZADA:
+#    - Todos los valores configurables en un solo lugar
+#    - Fácil de revisar la configuración completa
+#    - Documentación implícita del workflow
+#
+# ═══════════════════════════════════════════════════════════════
+# CUÁNDO USAR CONSTS VS INPUTS
+# ═══════════════════════════════════════════════════════════════
+#
+# Usa CONSTS cuando:
+# ✅ El valor es fijo para el workflow
+# ✅ Se usa en múltiples places
+# ✅ Representa configuración del entorno
+# ✅ No necesitas cambiarlo en cada ejecución
+#
+# Ejemplos: índices, umbrales, URLs de APIs, timeouts
+#
+# Usa INPUTS cuando:
+# ✅ El valor puede cambiar en cada ejecución
+# ✅ El usuario debe poder configurarlo
+# ✅ Necesitas flexibilidad en runtime
+# ✅ Es un parámetro de búsqueda o filtro variable
+#
+# Ejemplos: fecha específica, ID de usuario, query custom
+#
+# 💡 Puedes combinar ambos:
+# - consts para configuración base
+# - inputs para parámetros variables
+# ═══════════════════════════════════════════════════════════════
+

@@ -1,0 +1,165 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Acciones de Remediación Automática
+# ═══════════════════════════════════════════════════════════════
+name: remediation-actions
+description: |
+  Ejecuta acciones de remediación básicas automáticamente.
+  
+  Ejemplos:
+  - Reiniciar servicio degradado
+  - Limpiar cache
+  - Escalar recursos
+  - Ejecutar health check
+enabled: true
+tags: ["remediation", "auto-heal", "recovery"]
+
+triggers:
+  - type: alert
+
+steps:
+  # 1. Diagnosticar el problema
+  - name: diagnosticar
+    type: elasticsearch.search
+    with:
+      index: "logs-*,metrics-*"
+      query:
+        bool:
+          should:
+            - match:
+                message: "OutOfMemory"
+            - match:
+                message: "Connection pool exhausted"
+            - match:
+                message: "Disk full"
+          minimum_should_match: 1
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-10m"
+      size: 10
+      aggregations:
+        por_tipo_error:
+          terms:
+            field: "error.type"
+            size: 10
+  
+  # 2. Decidir acción según tipo de error
+  - name: decidir_remediacion
+    type: foreach
+    with:
+      items: "{{steps.diagnosticar.output.aggregations.por_tipo_error.buckets}}"
+      do:
+        - type: console
+          with:
+            message: |
+              🔧 Remediación sugerida para: {{item.key}}
+              
+              {% if item.key contains "Memory" %}
+              ➡️  ACCIÓN: Restart service con más memoria
+              Comando: kubectl scale deployment app --replicas=0 && kubectl scale deployment app --replicas=3
+              {% elsif item.key contains "Connection" %}
+              ➡️  ACCIÓN: Limpiar connection pool
+              Comando: curl -X POST http://app/admin/pool/reset
+              {% elsif item.key contains "Disk" %}
+              ➡️  ACCIÓN: Limpiar logs antiguos
+              Comando: find /var/log -mtime +7 -delete
+              {% else %}
+              ➡️  ACCIÓN: Health check general
+              Comando: curl http://app/health
+              {% endif %}
+  
+  # 3. Ejecutar acción (simulado - en producción usar http.request o webhook)
+  - name: ejecutar_accion
+    type: console
+    with:
+      message: |
+        ═══════════════════════════════════════════════════════
+        🛠️  REMEDIACIÓN AUTOMÁTICA
+        ═══════════════════════════════════════════════════════
+        
+        Timestamp: {{now | date: "%Y-%m-%d %H:%M:%S"}}
+        
+        Problemas detectados:
+        {% for bucket in steps.diagnosticar.output.aggregations.por_tipo_error.buckets %}
+        - {{bucket.key}}: {{bucket.doc_count}} ocurrencias
+        {% endfor %}
+        
+        ⚠️  NOTA: En este ejemplo, las acciones son simuladas.
+        
+        En producción, este workflow puede:
+        - Llamar APIs de Kubernetes
+        - Ejecutar scripts vía webhooks
+        - Trigger runbooks en automation platform
+        - Ejecutar comandos via SSH (con precaución)
+        
+        ═══════════════════════════════════════════════════════
+  
+  # 4. Esperar y verificar
+  - name: esperar_recuperacion
+    type: wait
+    with:
+      duration: "30s"
+  
+  # 5. Verificar si se resolvió
+  - name: verificar_resolucion
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        bool:
+          must:
+            - match:
+                log.level: "ERROR"
+          filter:
+            - range:
+                "@timestamp":
+                  gte: "now-1m"
+      size: 0
+  
+  # 6. Reporte final
+  - name: reporte_remediacion
+    type: console
+    with:
+      message: |
+        📋 REPORTE DE REMEDIACIÓN
+        
+        Estado actual: {% if steps.verificar_resolucion.output.hits.total.value < 10 %}✅ RESUELTO{% else %}❌ PERSISTE{% endif %}
+        
+        Errores antes: {{steps.diagnosticar.output.hits.total.value}}
+        Errores después: {{steps.verificar_resolucion.output.hits.total.value}}
+        
+        {% if steps.verificar_resolucion.output.hits.total.value < 10 %}
+        ✅ La remediación automática fue exitosa
+        {% else %}
+        ⚠️  El problema persiste - escalando a humanos
+        {% endif %}
+
+# ═══════════════════════════════════════════════════════════════
+# ⚠️  IMPORTANTE - REMEDIACIÓN AUTOMÁTICA
+# ═══════════════════════════════════════════════════════════════
+#
+# La remediación automática puede ser poderosa pero también riesgosa.
+#
+# RECOMENDACIONES:
+# ✅ Empezar con acciones de bajo riesgo (health checks, limpiezas)
+# ✅ Testear exhaustivamente en staging
+# ✅ Implementar circuit breakers (no ejecutar más de X veces por hora)
+# ✅ Loguear todas las acciones para auditoría
+# ✅ Tener rollback plan
+# ✅ Alertar a humanos antes de acciones críticas
+#
+# ACCIONES SEGURAS:
+# - Health checks
+# - Limpiar cache
+# - Restart de servicios no críticos
+# - Escalar horizontalmente
+#
+# ACCIONES RIESGOSAS (requieren aprobación):
+# - Restart de bases de datos
+# - Cambios en producción
+# - Eliminación de datos
+# - Cambios de configuración crítica
+#
+# Siempre prioriza la seguridad sobre la automatización.
+# ═══════════════════════════════════════════════════════════════
+
