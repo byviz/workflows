@@ -30,6 +30,9 @@ logs/
 test-data/
 local-test/
 
+# Workflows en revisión (no subir a GitHub hasta validar)
+_en-revision/
+
 # Node modules (si se usa alguna herramienta)
 node_modules/
 
