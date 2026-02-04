@@ -4,7 +4,7 @@
 # Descripción: Workflow parametrizable con inputs dinámicos
 # Caso de uso: Workflows reutilizables con diferentes valores
 # Requisitos: Elastic 9.3+
-# Autor: Iván Frías Molina - Byviz Analytics
+# Autor: Iván Frías Molina - Founder Byviz Analytics & Consulting Architect Elastic
 # URL: https://byviz.ai/workflows
 # ═══════════════════════════════════════════════════════════════
 
@@ -46,18 +46,10 @@ inputs:
     type: string
     description: "Rango de tiempo (formato Elasticsearch, ej: now-1h)"
     required: false
-    default: "now-1h"
+    default: "now-24h"
   
-  # Input 4: Número de resultados
-  - name: max_results
-    type: integer
-    description: "Número máximo de documentos a retornar"
-    required: false
-    default: 10
 
-# ───────────────────────────────────────────────────────────────
-# TRIGGERS
-# ───────────────────────────────────────────────────────────────
+
 triggers:
   - type: manual
 
@@ -76,7 +68,7 @@ steps:
         Índice: {{inputs.index_pattern}}
         Nivel de log: {{inputs.log_level}}
         Rango de tiempo: {{inputs.time_range}}
-        Máximo de resultados: {{inputs.max_results}}
+
         
         ════════════════════════════════════════════════
 
@@ -101,8 +93,6 @@ steps:
                   gte: "{{inputs.time_range}}"
                   lte: "now"
       
-      # Usar el input max_results
-      size: "{{inputs.max_results}}"
 
   # Step 3: Mostrar resultados
   - name: mostrar_resultados
@@ -117,7 +107,6 @@ steps:
         Periodo: {{inputs.time_range}} hasta now
         
         Total encontrados: {{steps.buscar_con_parametros.output.hits.total.value}}
-        Documentos retornados: {{steps.buscar_con_parametros.output.hits.hits.size}}
         Tiempo de búsqueda: {{steps.buscar_con_parametros.output.took}}ms
         
         ════════════════════════════════════════════════
@@ -182,4 +171,3 @@ steps:
 # - Testing rápido con diferentes parámetros
 # - Workflows más mantenibles
 # ═══════════════════════════════════════════════════════════════
-

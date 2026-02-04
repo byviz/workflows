@@ -4,7 +4,7 @@
 # Descripción: Workflow disparado automáticamente por una alerta
 # Caso de uso: Respuesta automática a incidentes
 # Requisitos: Elastic 9.3+, Alerta configurada en Kibana
-# Autor: Iván Frías Molina - Byviz Analytics
+# Autor: Iván Frías Molina - Founder Byviz Analytics & Consulting Architect Elastic
 # URL: https://byviz.ai/workflows
 # ═══════════════════════════════════════════════════════════════
 

@@ -4,7 +4,7 @@
 # Descripción: Uso de constantes para valores reutilizables
 # Caso de uso: Centralizar configuración, evitar hardcoding
 # Requisitos: Elastic 9.3+
-# Autor: Iván Frías Molina - Byviz Analytics
+# Autor: Iván Frías Molina - Founder Byviz Analytics & Consulting Architect Elastic
 # URL: https://byviz.ai/workflows
 # ═══════════════════════════════════════════════════════════════
 
@@ -112,49 +112,8 @@ steps:
       # Usar constante para timeout
       timeout: "{{consts.es_timeout}}"
 
-  # Step 3: Evaluar si supera umbral
-  - name: evaluar_umbral
-    type: if
-    with:
-      # Comparar con constante error_threshold
-      condition: "{{steps.buscar_errores.output.hits.total.value > consts.error_threshold}}"
-      
-      then:
-        # Si supera el umbral
-        - type: console
-          with:
-            message: |
-              🚨 ALERTA CRÍTICA
-              ════════════════════════════════════════════════
-              
-              Se superó el umbral de errores!
-              
-              Errores detectados: {{steps.buscar_errores.output.hits.total.value}}
-              Umbral configurado: {{consts.error_threshold}}
-              Periodo: Últimos {{consts.time_window}}
-              Índice: {{consts.logs_index}}
-              
-              Severidad: {{consts.alert_severity | upcase}}
-              Notificar en: {{consts.alert_channel}}
-              
-              ⚠️  Acción requerida inmediata
-              ════════════════════════════════════════════════
-      
-      else:
-        # Si NO supera el umbral
-        - type: console
-          with:
-            message: |
-              ✅ SISTEMA NORMAL
-              ════════════════════════════════════════════════
-              
-              Errores detectados: {{steps.buscar_errores.output.hits.total.value}}
-              Umbral configurado: {{consts.error_threshold}}
-              
-              Sistema operando dentro de parámetros normales.
-              ════════════════════════════════════════════════
 
-  # Step 4: Buscar warnings usando las mismas constantes
+  # Step 3: Buscar warnings usando las mismas constantes
   - name: buscar_warnings
     type: elasticsearch.search
     with:
@@ -175,7 +134,7 @@ steps:
       
       size: 0  # Solo queremos el conteo
 
-  # Step 5: Reporte final
+  # Step 4: Reporte final
   - name: reporte_final
     type: console
     with:
@@ -253,4 +212,3 @@ steps:
 # - consts para configuración base
 # - inputs para parámetros variables
 # ═══════════════════════════════════════════════════════════════
-
