@@ -47,10 +47,6 @@ steps:
       # Limitar resultados
       size: 10
       
-      # Ordenar por timestamp descendente
-      sort:
-        - "@timestamp":
-            order: desc
 
   # Step 2: Mostrar resultado en consola
   - name: mostrar_resultado
@@ -61,7 +57,6 @@ steps:
         
         📊 Resultados de búsqueda:
         - Total encontrados: {{steps.buscar_documentos.output.hits.total.value}}
-        - Documentos retornados: {{steps.buscar_documentos.output.hits.hits.size}}
         - Tiempo de búsqueda: {{steps.buscar_documentos.output.took}}ms
         
         💡 Revisa el historial de ejecución en Kibana para ver detalles completos

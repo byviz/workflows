@@ -233,6 +233,7 @@ Workflows complejos production-ready con lógica condicional y procesamiento mas
 - 💬 [Discusiones](https://github.com/byviz/workflows/discussions)
 - 🤝 [Cómo contribuir](CONTRIBUTING.md)
 - 📧 Contacto: [byviz.ai/contacto](https://byviz.ai/contacto)
+- ivan.frias@elastic.co - ivan.frias@byviz.com
 
 ### Formación y Consultoría
 
@@ -280,7 +281,7 @@ Los workflows son ejemplos educativos. Revisa y adapta según tus necesidades an
 ## 🌟 Acerca del Autor
 
 **Iván Frías Molina**  
-Consultor Elastic & Gold Contributor | 10+ años de experiencia
+Consultor Elastic & Gold Contributor & Founder Byviz Analytics
 
 - 🌐 [byviz.ai](https://byviz.ai)
 - 💼 [LinkedIn](https://www.linkedin.com/in/ivan-frias-molina-arquitecto-ingeniero-elasticsearch/)
