@@ -87,12 +87,12 @@ steps:
         ERRORES DETECTADOS: {{steps.recopilar_logs_error.output.hits.total.value}}
         
         Últimos errores:
-        {% for hit in steps.recopilar_logs_error.output.hits.hits limit:5 %}
+        {% for hit in steps.recopilar_logs_error.output.hits.hits %}
         - [{{hit._source.@timestamp}}] {{hit._source.service.name}}: {{hit._source.message}}
         {% endfor %}
         
         MÉTRICAS DE SISTEMA:
-        {% for hit in steps.obtener_metricas.output.hits.hits limit:3 %}
+        {% for hit in steps.obtener_metricas.output.hits.hits %}
         - Host: {{hit._source.host.name}}
           CPU: {{hit._source.system.cpu.total.pct | times: 100 | round: 2}}%
           Memory: {{hit._source.system.memory.used.pct | times: 100 | round: 2}}%

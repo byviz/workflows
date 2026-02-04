@@ -64,7 +64,7 @@ steps:
         Boosted Search: {{steps.boosted_search.output.hits.total.value}} resultados
         
         Top 3 resultados con boost:
-        {% for hit in steps.boosted_search.output.hits.hits limit:3 %}
+        {% for hit in steps.boosted_search.output.hits.hits %}
         [{{loop.index}}] Score: {{hit._score}}
             {{hit._source.message | truncate: 150}}
         {% endfor %}

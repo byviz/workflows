@@ -70,7 +70,7 @@ steps:
         Se detectaron {{steps.recopilar_info.output.hits.total.value}} errores en los últimos 15 minutos.
         
         Servicios afectados:
-        {% for bucket in steps.recopilar_info.output.aggregations.servicios_afectados.buckets limit:5 %}
+        {% for bucket in steps.recopilar_info.output.aggregations.servicios_afectados.buckets %}
         - {{bucket.key}}: {{bucket.doc_count}} errores
         {% endfor %}
         
@@ -78,7 +78,7 @@ steps:
         Link to Kibana: [Generar link a Discover]
         
         Últimos errores:
-        {% for hit in steps.recopilar_info.output.hits.hits limit:3 %}
+        {% for hit in steps.recopilar_info.output.hits.hits %}
         - [{{hit._source.@timestamp}}] {{hit._source.message | truncate: 100}}
         {% endfor %}
   

@@ -90,7 +90,7 @@ steps:
         ───────────────────────────────────────────────────────
         🏆 TOP 5 SERVICIOS MÁS ACTIVOS
         ───────────────────────────────────────────────────────
-        {% for bucket in steps.top_servicios.output.aggregations.servicios.buckets limit:5 %}
+        {% for bucket in steps.top_servicios.output.aggregations.servicios.buckets %}
         {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}} logs
         {% endfor %}
         

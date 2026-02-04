@@ -121,10 +121,10 @@ steps:
         ═══════════════════════════════════════════════════════
         
         🔍 ANÁLISIS MULTINIVEL (Servicio → Nivel → Timeline):
-        {% for servicio in steps.analisis_multinivel.output.aggregations.por_servicio.buckets limit:3 %}
+        {% for servicio in steps.analisis_multinivel.output.aggregations.por_servicio.buckets %}
         
         📦 Servicio: {{servicio.key}} ({{servicio.doc_count}} logs)
-        {% for nivel in servicio.por_nivel.buckets limit:3 %}
+        {% for nivel in servicio.por_nivel.buckets %}
           └─ {{nivel.key}}: {{nivel.doc_count}}
         {% endfor %}
         {% endfor %}

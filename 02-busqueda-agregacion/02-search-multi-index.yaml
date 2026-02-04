@@ -271,7 +271,7 @@ steps:
         Total: {{steps.buscar_por_servicio.output.hits.total.value}}
         
         Distribución por índice:
-        {% for bucket in steps.buscar_por_servicio.output.aggregations.por_indice.buckets limit:5 %}
+        {% for bucket in steps.buscar_por_servicio.output.aggregations.por_indice.buckets %}
         - {{bucket.key}}: {{bucket.doc_count}} documentos
         {% endfor %}
         {% endif %}
@@ -283,7 +283,7 @@ steps:
         Documentos correlacionados: {{steps.correlacion_por_trace.output.hits.total.value}}
         
         Timeline:
-        {% for hit in steps.correlacion_por_trace.output.hits.hits limit:10 %}
+        {% for hit in steps.correlacion_por_trace.output.hits.hits %}
         [{{hit._source.@timestamp}}] {{hit._index}}
           → {{hit._source.message | default: hit._source.transaction.name | default: "N/A"}}
         {% endfor %}
@@ -304,12 +304,12 @@ steps:
         ───────────────────────────────────────────────────────
         
         Top Data Streams:
-        {% for bucket in steps.analisis_agregado.output.aggregations.por_data_stream.buckets limit:5 %}
+        {% for bucket in steps.analisis_agregado.output.aggregations.por_data_stream.buckets %}
         {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}}
         {% endfor %}
         
         Top Servicios:
-        {% for bucket in steps.analisis_agregado.output.aggregations.top_servicios.buckets limit:5 %}
+        {% for bucket in steps.analisis_agregado.output.aggregations.top_servicios.buckets %}
         {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}}
         {% endfor %}
         

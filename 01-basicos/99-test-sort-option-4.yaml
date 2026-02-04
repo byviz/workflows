@@ -1,0 +1,53 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Test de Sintaxis de Sort - OPCIÓN 4 (Sin Sort)
+# ═══════════════════════════════════════════════════════════════
+
+name: test-sort-option-4-no-sort
+description: |
+  Prueba búsqueda SIN sort para verificar que funciona la base
+  
+enabled: true
+tags: ["test", "debug", "sort"]
+
+triggers:
+  - type: manual
+
+steps:
+  - name: mensaje_inicial
+    type: console
+    with:
+      message: |
+        ════════════════════════════════════════════════════════
+        🧪 TEST: Sin sort (control)
+        ════════════════════════════════════════════════════════
+        Sintaxis:
+          # Sin parámetro sort
+        ════════════════════════════════════════════════════════
+
+  - name: buscar_sin_sort
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        range:
+          "@timestamp":
+            gte: "now-1h"
+      size: 5
+
+  - name: mostrar_resultado
+    type: console
+    with:
+      message: |
+        ✅ RESULTADO
+        ════════════════════════════════════════════════════════
+        Total documentos: {{steps.buscar_sin_sort.output.hits.total.value}}
+        
+        Primeros timestamps (size=5):
+        {% for hit in steps.buscar_sin_sort.output.hits.hits %}
+        - {{hit._source.@timestamp}}
+        {% endfor %}
+        ════════════════════════════════════════════════════════
+        
+        Si ves esto, la búsqueda base FUNCIONA ✅
+        (Ahora prueba las opciones 1, 2 y 3 para ver cuál sort funciona)
+

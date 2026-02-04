@@ -92,12 +92,12 @@ steps:
         Ventana: {{consts.time_window}}
         
         Top servicios afectados:
-        {% for bucket in steps.detectar_problema.output.aggregations.por_servicio.buckets limit:5 %}
+        {% for bucket in steps.detectar_problema.output.aggregations.por_servicio.buckets %}
         - {{bucket.key}}: {{bucket.doc_count}}
         {% endfor %}
         
         Primeros eventos:
-        {% for hit in steps.detectar_problema.output.hits.hits limit:3 %}
+        {% for hit in steps.detectar_problema.output.hits.hits %}
         - [{{hit._source.@timestamp}}] {{hit._source.message | truncate: 100}}
         {% endfor %}
         

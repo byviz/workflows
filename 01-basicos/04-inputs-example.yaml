@@ -126,7 +126,7 @@ steps:
         ════════════════════════════════════════════════
         
         💡 PRIMEROS RESULTADOS:
-        {% for hit in steps.buscar_con_parametros.output.hits.hits limit:3 %}
+        {% for hit in steps.buscar_con_parametros.output.hits.hits %}
         
         [{{loop.index}}] Timestamp: {{hit._source.@timestamp}}
             Mensaje: {{hit._source.message}}

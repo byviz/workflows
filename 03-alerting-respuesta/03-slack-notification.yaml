@@ -70,12 +70,12 @@ steps:
         • Timestamp: {{now | date: "%Y-%m-%d %H:%M:%S"}}
         
         🏢 *Servicios afectados:*
-        {% for bucket in steps.analizar_incidente.output.aggregations.servicios.buckets limit:5 %}
+        {% for bucket in steps.analizar_incidente.output.aggregations.servicios.buckets %}
         • {{bucket.key}}: {{bucket.doc_count}} errores
         {% endfor %}
         
         🔍 *Primeros errores:*
-        {% for hit in steps.analizar_incidente.output.hits.hits limit:3 %}
+        {% for hit in steps.analizar_incidente.output.hits.hits %}
         {{loop.index}}. `{{hit._source.service.name | default: "N/A"}}` - {{hit._source.message | truncate: 80}}
         {% endfor %}
         
@@ -97,7 +97,7 @@ steps:
   #       Periodo: Últimos 10 minutos
   #       
   #       Servicios afectados:
-  #       {% for bucket in steps.analizar_incidente.output.aggregations.servicios.buckets limit:3 %}
+  #       {% for bucket in steps.analizar_incidente.output.aggregations.servicios.buckets %}
   #       • {{bucket.key}}: {{bucket.doc_count}}
   #       {% endfor %}
 

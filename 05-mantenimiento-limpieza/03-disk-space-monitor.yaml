@@ -37,7 +37,7 @@ steps:
       message: |
         💽 MONITOREO DE DISCO
         
-        {% for hit in steps.check_disk_space.output.hits.hits limit:5 %}
+        {% for hit in steps.check_disk_space.output.hits.hits %}
         Host: {{hit._source.host.name}}
         Uso: {{hit._source.system.filesystem.used.pct | times: 100 | round: 2}}%
         

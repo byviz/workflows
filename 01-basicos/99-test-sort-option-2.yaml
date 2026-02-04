@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════════════
+# WORKFLOW: Test de Sintaxis de Sort - OPCIÓN 2
+# ═══════════════════════════════════════════════════════════════
+
+name: test-sort-option-2
+description: |
+  Prueba sort como objeto inline:
+  sort: [{"@timestamp": desc}]
+  
+enabled: true
+tags: ["test", "debug", "sort"]
+
+triggers:
+  - type: manual
+
+steps:
+  - name: mensaje_inicial
+    type: console
+    with:
+      message: |
+        ════════════════════════════════════════════════════════
+        🧪 TEST: Sort como objeto inline
+        ════════════════════════════════════════════════════════
+        Sintaxis:
+          sort:
+            - "@timestamp": desc
+        ════════════════════════════════════════════════════════
+
+  - name: buscar_con_sort_inline
+    type: elasticsearch.search
+    with:
+      index: "logs-*"
+      query:
+        range:
+          "@timestamp":
+            gte: "now-1h"
+      size: 5
+      sort:
+        - "@timestamp": desc
+
+  - name: mostrar_resultado
+    type: console
+    with:
+      message: |
+        ✅ RESULTADO
+        ════════════════════════════════════════════════════════
+        Total documentos: {{steps.buscar_con_sort_inline.output.hits.total.value}}
+        
+        Timestamps (size=5):
+        {% for hit in steps.buscar_con_sort_inline.output.hits.hits %}
+        - {{hit._source.@timestamp}}
+        {% endfor %}
+        ════════════════════════════════════════════════════════
+        
+        Si ves esto, la sintaxis inline FUNCIONA ✅
+

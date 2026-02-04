@@ -56,12 +56,12 @@ steps:
               Umbral crítico: {{consts.critical_threshold}}
               
               TOP SERVICIOS AFECTADOS:
-              {% for bucket in steps.contar_errores.output.aggregations.por_servicio.buckets limit:5 %}
+              {% for bucket in steps.contar_errores.output.aggregations.por_servicio.buckets %}
               - {{bucket.key}}: {{bucket.doc_count}}
               {% endfor %}
               
               TIPOS DE ERROR:
-              {% for bucket in steps.contar_errores.output.aggregations.por_tipo.buckets limit:5 %}
+              {% for bucket in steps.contar_errores.output.aggregations.por_tipo.buckets %}
               - {{bucket.key}}: {{bucket.doc_count}}
               {% endfor %}
       else:
@@ -108,12 +108,12 @@ steps:
         Severidad: {% if steps.contar_errores.output.hits.total.value >= consts.critical_threshold %}CRÍTICA{% else %}MEDIA{% endif %}
         
         🏢 SERVICIOS MÁS AFECTADOS:
-        {% for bucket in steps.contar_errores.output.aggregations.por_servicio.buckets limit:5 %}
+        {% for bucket in steps.contar_errores.output.aggregations.por_servicio.buckets %}
         {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}} errores
         {% endfor %}
         
         🔍 PRIMEROS ERRORES:
-        {% for hit in steps.obtener_contexto.output.hits.hits limit:5 %}
+        {% for hit in steps.obtener_contexto.output.hits.hits %}
         
         [{{hit._source.@timestamp}}] {{hit._source.service.name | default: "N/A"}}
         {{hit._source.message | truncate: 150}}

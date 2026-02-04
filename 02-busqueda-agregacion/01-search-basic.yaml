@@ -218,7 +218,7 @@ steps:
         Tiempo: {{steps.busqueda_con_filtros.output.took}}ms
         
         Primeros resultados:
-        {% for hit in steps.busqueda_con_filtros.output.hits.hits limit:5 %}
+        {% for hit in steps.busqueda_con_filtros.output.hits.hits %}
         [{{loop.index}}] {{hit._source.@timestamp}}
             📝 {{hit._source.message | truncate: 100}}
             🏷️  {{hit._source.log.level}} | {{hit._source.service.name | default: "N/A"}}

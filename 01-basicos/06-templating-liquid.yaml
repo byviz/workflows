@@ -214,7 +214,7 @@ steps:
         
         2️⃣  Loop con límite:
         Primeros 3 documentos:
-        {% for hit in steps.buscar_datos.output.hits.hits limit:3 %}
+        {% for hit in steps.buscar_datos.output.hits.hits %}
         {{loop.index}}. {{hit._source.message | default: "Sin mensaje"}}
         {% endfor %}
         
@@ -374,7 +374,7 @@ steps:
         3️⃣  LISTADOS NUMERADOS:
         
         Documentos encontrados:
-        {% for hit in steps.buscar_datos.output.hits.hits limit:5 %}
+        {% for hit in steps.buscar_datos.output.hits.hits %}
         {{loop.index}}. [{{hit._source.@timestamp | default: "Sin fecha"}}]
            ID: {{hit._id}}
            Índice: {{hit._index}}

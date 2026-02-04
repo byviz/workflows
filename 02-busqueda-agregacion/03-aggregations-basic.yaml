@@ -139,12 +139,12 @@ steps:
         ═══════════════════════════════════════════════════════
         
         🔴 TOP ERRORES (últimas {{consts.time_range}}):
-        {% for bucket in steps.top_errores_por_tipo.output.aggregations.top_errores.buckets limit:5 %}
+        {% for bucket in steps.top_errores_por_tipo.output.aggregations.top_errores.buckets %}
         {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}} ocurrencias
         {% endfor %}
         
         🏢 TOP SERVICIOS CON ERRORES:
-        {% for bucket in steps.top_errores_por_tipo.output.aggregations.top_servicios.buckets limit:5 %}
+        {% for bucket in steps.top_errores_por_tipo.output.aggregations.top_servicios.buckets %}
         {{loop.index}}. {{bucket.key}}: {{bucket.doc_count}} errores
         {% endfor %}
         

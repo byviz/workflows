@@ -96,7 +96,7 @@ steps:
         - Timestamp: {{now | date: "%Y-%m-%d %H:%M:%S"}}
         
         🔍 Primeros eventos:
-        {% for hit in steps.buscar_contexto_adicional.output.hits.hits limit:5 %}
+        {% for hit in steps.buscar_contexto_adicional.output.hits.hits %}
         - [{{hit._source.@timestamp}}] {{hit._source.message}}
         {% endfor %}
         

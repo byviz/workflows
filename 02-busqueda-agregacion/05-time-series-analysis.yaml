@@ -49,7 +49,7 @@ steps:
         📈 ANÁLISIS TEMPORAL (últimos {{consts.time_range}})
         
         Timeline de errores por hora (últimas 24h):
-        {% for bucket in steps.timeline_errores.output.aggregations.errores_por_hora.buckets limit:24 %}
+        {% for bucket in steps.timeline_errores.output.aggregations.errores_por_hora.buckets %}
         {{bucket.key_as_string}}: {{bucket.doc_count}} errores
         {% endfor %}
 
