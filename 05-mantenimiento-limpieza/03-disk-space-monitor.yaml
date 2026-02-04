@@ -26,7 +26,7 @@ steps:
             gte: "now-10m"
       size: 1
       sort:
-        - "@timestamp": desc
+        - "@timestamp:desc"
       _source:
         - "system.filesystem.used.pct"
         - "host.name"

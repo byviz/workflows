@@ -76,9 +76,9 @@ steps:
       # Obtener documentos recientes
       size: 50
       
+      # Sort: formato simplificado en Workflows
       sort:
-        - "@timestamp":
-            order: desc
+        - "@timestamp:desc"
 
   # Step 3: Generar reporte del incidente
   - name: generar_reporte

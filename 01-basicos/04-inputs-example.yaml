@@ -105,8 +105,7 @@ steps:
       size: "{{inputs.max_results}}"
       
       sort:
-        - "@timestamp":
-            order: desc
+        - "@timestamp:desc"
 
   # Step 3: Mostrar resultados
   - name: mostrar_resultados

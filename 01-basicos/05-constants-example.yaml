@@ -113,8 +113,7 @@ steps:
       timeout: "{{consts.es_timeout}}"
       
       sort:
-        - "@timestamp":
-            order: desc
+        - "@timestamp:desc"
 
   # Step 3: Evaluar si supera umbral
   - name: evaluar_umbral

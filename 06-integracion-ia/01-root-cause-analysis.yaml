@@ -43,7 +43,7 @@ steps:
                   gte: "now-15m"
       size: 20
       sort:
-        - "@timestamp": desc
+        - "@timestamp:desc"
   
   # 2. Obtener métricas de sistema
   - name: obtener_metricas

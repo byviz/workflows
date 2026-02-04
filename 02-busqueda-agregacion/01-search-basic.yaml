@@ -64,8 +64,8 @@ steps:
       
       # Ordenar por relevancia (_score) y fecha
       sort:
-        - _score: desc
-        - "@timestamp": desc
+        - "_score:desc"
+        - "@timestamp:desc"
 
   # ═══════════════════════════════════════════════════════════
   # 2. BÚSQUEDA CON FILTROS - Bool query
@@ -98,8 +98,7 @@ steps:
       size: "{{consts.max_results}}"
       
       sort:
-        - "@timestamp":
-            order: desc
+        - "@timestamp:desc"
       
       # Seleccionar solo campos específicos
       _source:
@@ -141,8 +140,8 @@ steps:
       size: 20
       
       sort:
-        - _score: desc
-        - "@timestamp": desc
+        - "_score:desc"
+        - "@timestamp:desc"
 
   # ═══════════════════════════════════════════════════════════
   # 4. BÚSQUEDA CON WILDCARDS

@@ -65,7 +65,7 @@ steps:
       size: "{{consts.max_results}}"
       
       sort:
-        - "@timestamp": desc
+        - "@timestamp:desc"
       
       # Incluir el índice en los resultados
       _source:
@@ -137,7 +137,7 @@ steps:
       size: 200
       
       sort:
-        - "@timestamp": asc
+        - "@timestamp:asc"
 
   # ═══════════════════════════════════════════════════════════
   # 4. BÚSQUEDA EN ENTORNOS (dev, staging, prod)

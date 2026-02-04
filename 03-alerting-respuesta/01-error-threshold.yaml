@@ -88,7 +88,7 @@ steps:
                   gte: "now-{{consts.time_window}}"
       size: 10
       sort:
-        - "@timestamp": desc
+        - "@timestamp:desc"
   
   # 4. Generar reporte
   - name: reporte_incidente

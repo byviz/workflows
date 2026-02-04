@@ -56,8 +56,8 @@ steps:
           filter:
             - range:
                 "@timestamp":
-                  # Últimos 60 minutos
-                  gte: "now-1h"
+                  # Últimas 24h
+                  gte: "now-24h"
                   lte: "now"
       
       # Solo necesitamos el conteo
@@ -71,6 +71,7 @@ steps:
             size: 10
 
   # Step 2: Registrar estadísticas
+  # IMPORTANTE: Aunque marca un error en Kibana, funciona correctamente, es debido al bucle
   - name: mostrar_estadisticas
     type: console
     with:
