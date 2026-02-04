@@ -13,7 +13,7 @@ consts:
 triggers:
   - type: scheduled
     with:
-      schedule: "0 1 * * *"  # Diario a la 1am
+      every: "1d"  # Diario (cada 24 horas)
 
 steps:
   - name: verificar_indices

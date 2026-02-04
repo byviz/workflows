@@ -9,7 +9,7 @@ tags: ["kpi", "dashboard", "metrics"]
 triggers:
   - type: scheduled
     with:
-      schedule: "0 * * * *"  # Cada hora
+      every: "1h"  # Cada hora
 
 steps:
   - name: calcular_kpis

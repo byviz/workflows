@@ -13,7 +13,7 @@ consts:
 triggers:
   - type: scheduled
     with:
-      schedule: "0 2 * * 0"  # Domingos a las 2am
+      every: "7d"  # Semanal (cada 7 días)
 
 steps:
   # 1. Listar índices antiguos

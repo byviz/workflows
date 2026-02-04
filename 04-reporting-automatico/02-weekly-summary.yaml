@@ -9,7 +9,7 @@ tags: ["reporting", "weekly", "executive"]
 triggers:
   - type: scheduled
     with:
-      schedule: "0 9 * * MON"  # Lunes a las 9am
+      every: "7d"  # Semanal (cada 7 días)
 
 steps:
   - name: metricas_semana

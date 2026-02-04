@@ -14,7 +14,7 @@ consts:
 triggers:
   - type: scheduled
     with:
-      schedule: "*/10 * * * *"  # Cada 10 minutos
+      every: "10m"  # Cada 10 minutos
 
 steps:
   # STAGE 1: Data Collection

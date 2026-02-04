@@ -14,7 +14,7 @@ consts:
 triggers:
   - type: scheduled
     with:
-      schedule: "0 8 * * *"  # Diario a las 8am - personalizar
+      every: "1d"  # Diario (cada 24 horas) - personalizar
 
 steps:
   # 1. Recopilar datos

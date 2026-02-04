@@ -12,7 +12,7 @@ consts:
 triggers:
   - type: scheduled
     with:
-      schedule: "0 8 * * *"  # Diario a las 8am
+      every: "1d"  # Diario (se ejecutará cada 24 horas)
 
 steps:
   # Conteo de logs por severidad
